@@ -18,7 +18,7 @@
 
 ## 致谢
 
-本项目基于 [Notea](https://github.com/notea-org/notea) 重构，UI 设计沿用原版风格。感谢原作者 [qingwei-li](https://github.com/qingwei-li) 和[notea团队]([https://github.com/qingwei-li](https://github.com/notea-org/notea)开源贡献，是他们创造了这个优雅的项目。
+本项目基于 [Notea](https://github.com/notea-org/notea) 重构，UI 设计沿用原版风格。感谢原作者 [qingwei-li](https://github.com/qingwei-li) 和[notea团队]((https://github.com/notea-org/notea)]开源贡献，是他们创造了这个优雅的项目。
 
 ## 部署
 
