@@ -2,7 +2,7 @@
 
 > 念念不忘，必有回响。
 
-一个基于 [Notea](https://github.com/notea-org/notea) 重构的现代笔记应用，沿用原版优雅的 UI 设计，采用 [Lexical](https://lexical.dev) 编辑器 + PostgreSQL 存储，支持一键部署到 Vercel。
+一个基于 [Notea](https://github.com/notea-org/notea) 重构的现代笔记应用，沿用原版优雅的 UI 设计，采用 [Lexical](https://lexical.dev) 编辑器 + PostgreSQL 存储，~~支持一键部署到 Vercel~~。
 
 [演示视频](https://www.bilibili.com/video/BV1KcTLzWENe/?vd_source=441079f1b64b3a1b4c28abe897343608)
 
