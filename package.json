@@ -1,6 +1,6 @@
 {
     "name": "notea",
-    "version": "0.4.0-alpha",
+    "version": "3.0.0",
     "private": true,
     "packageManager": "npm@9.6.7",
     "scripts": {
@@ -16,7 +16,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/notea-org/notea"
+        "url": "https://github.com/waycaan/motea"
     },
     "husky": {
         "hooks": {
@@ -52,7 +52,6 @@
         "@material-ui/core": "^4.12.3",
         "@material-ui/lab": "^4.0.0-alpha.60",
         "@notea/headway-widget": "^0.0.5-alpha",
-        "@types/jszip": "^3.4.1",
         "adm-zip": "^0.5.5",
         "classnames": "^2.2.6",
         "csrf": "^3.1.0",
@@ -64,7 +63,6 @@
         "formidable": "^3.5.1",
         "highlight.js": "^10.7.2",
         "js-yaml": "^4.1.0",
-        "jszip": "^3.10.1",
         "lexical": "^0.32.1",
         "localforage": "^1.9.0",
         "lodash": "^4.17.21",
@@ -145,5 +143,5 @@
         "refractor": "^4.8.1",
         "@types/react": "17.0.50"
     },
-    "license": "MIT"
+    "license": "Apache-2.0"
 }

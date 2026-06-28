@@ -1,99 +1,65 @@
 # motea
 
-# 念念不忘，必有回响。
+> 念念不忘，必有回响。
 
-本项目基于优秀的开源项目 [Notea](https://github.com/notea-org/notea)，遵循其 MIT 协议。我在原有架构基础上进行了一系列优化与调整，使其更适合部署在 [Vercel](https://vercel.com) 平台上，特别是结合 [Neon](https://neon.tech) 提供的 PostgreSQL 数据库服务。
+一个基于 [Notea](https://github.com/notea-org/notea) 重构的现代笔记应用，沿用原版优雅的 UI 设计，采用 [Lexical](https://lexical.dev) 编辑器 + PostgreSQL 存储，支持一键部署到 Vercel。
 
-## [✈️B站应用展示](https://www.bilibili.com/video/BV1KcTLzWENe/?vd_source=441079f1b64b3a1b4c28abe897343608)
+[演示视频](https://www.bilibili.com/video/BV1KcTLzWENe/?vd_source=441079f1b64b3a1b4c28abe897343608)
 
-# 重大更新
-## 该项目重新改用了lexical编辑器[点此体验](https://playground.lexical.dev/)
-- 由于无法解决tiptap编辑器的IME问题，没错，就是非英语输入时的打断一直无法解决。完全弃用tiptap编辑器。（我是真的搞了很久都搞不好，本地部署没出现问题）
-- 增加table，文本抽屉，和居中等功能的支持。（本来想增加多点插件的，但是对前端的资源调配很高，table都是使用自定义的，原生插件实在太费资源了，尝试增加过插件，后来又做减法）
-- 修复了图片格式插入后的格式不对应。
-- 增加缩进和伸出的支持。
-- 由于使用了新的编辑器，所以修改了很多逻辑，不一一叙述了。
-- 支持manifest了，浏览器链接右边有个小电脑，点击有惊喜。
+## 特性
 
-**不再进行重大更新了，现在已经很好，反正现在就是很好用**
-  
---- 
-## 🚀🚀🚀🚀🚀注意修改了数据的保存格式，旧版本的笔记请先备份导出，然后重新部署后，再次导入到系统中。新编辑器不再支持旧版本的数据库格式。🚀🚀🚀🚀🚀
---- 
+- **Lexical 编辑器** — 所见即所得，支持 `/` 快捷命令和浮动工具栏
+- **PostgreSQL 存储** — 替代 S3，更稳定、更易部署
+- **手动保存** — Ctrl+S 保存，告别自动保存的不确定性
+- **笔记管理** — 归档、收藏、大纲、批量操作
+- **版本历史** — 原版未提供的功能，支持笔记版本回溯与恢复
+- **Markdown 兼容** — 支持标准 Markdown 语法，兼容 Typora 编辑体验
+- **图片链接** — 采用 Markdown 图片链接，可配合图床使用（推荐 [Mazine](https://github.com/waycaan/mazine)）
 
+## 致谢
 
-## 🌟 项目亮点
+本项目基于 [Notea](https://github.com/notea-org/notea) 重构，UI 设计沿用原版风格。感谢原作者 [qingwei-li](https://github.com/qingwei-li) 的开源贡献，是他们创造了这个优雅的项目。
 
-- ✍️ -替换编辑器为 [Tiptap](https://tiptap.dev)，提供所见即所得的编辑体验；-
-- 🧠 新的编辑器采用新的 `/` 快捷语法调用与 **右键**  Markdown 浮动菜单支持；
-- ♻️ 改用postgresql作为数据库，并重构后端大部分的处理逻辑和设定，更高效更稳定。
-- 💾 修改为手动保存模式，快捷键为ctrl+s，以及添加边际情况的自动保存处理；
-- ⚙️ 针对编辑器与保存机制重构上传/加载逻辑，减少函数调用，提升性能；
-- 🧱 保留无边界的笔记页面结构；
-- 🔐 延续原项目的加密认证与权限控制逻辑；
-- 🔁 保留笔记管理与共享机制；
-- 🖼️ 去除本地图片上传，采用 Markdown 图片链接渲染方式，编辑体验更接近 Typora；
-- 📦 如需图床支持，可参考我的另一个原创项目 [Mazine](https://github.com/waycaan/mazine)。
+## 部署
 
-## 🚀 部署方式（推荐 Vercel + Neon）
+### Vercel + Neon（推荐）
 
-> 为获得最佳体验，请使用 **Neon 数据库 Washington, D.C., USA (East)** 区域节点。因大部分用户使用 Vercel 免费计划（主机位于美国），使用该节点可获得最低延迟。
+1. Fork 本项目
+2. 在 [Vercel](https://vercel.com) 导入项目
+3. 添加环境变量：
 
-[数据库生成教学](/doc/neon.md)
+| 变量 | 说明 |
+|------|------|
+| `DATABASE_URL` | PostgreSQL 连接字符串（[教程](/doc/neon.md)） |
+| `PASSWORD` | 登录密码 |
+| `PRELOAD_NOTES_COUNT` | 预加载笔记数（默认 10） |
 
----
+4. 点击 Deploy，约 2 分钟完成
 
-### 1. Fork 本项目
+> 建议使用 Neon 的 **Washington, D.C. (East)** 区域，与 Vercel 主机同区延迟最低。
 
-点击右上角 `Fork`，将项目复制到你的 GitHub 账户下。
+### Docker
 
-### 2. 导入至 Vercel
+```bash
+# 下载 docker-compose.yml，修改以下参数：
+# PASSWORD=你的密码
+# COOKIE_SECURE=false（局域网）
+# BASE_URL=http://localhost:3000
 
-登录 [Vercel](https://vercel.com)，点击 `Import Project`，选择刚刚 Fork 的仓库。
+docker-compose up -d
+```
 
-### 3. 设置环境变量
+如有 SSL 证书，需设置 `COOKIE_SECURE=true`。
 
-在 Vercel 项目的 `Settings > Environment Variables` 页面，添加以下变量：
+## 技术栈
 
-| 变量名              | 示例值或说明                      |
-|---------------------|----------------------------------|
-| `DATABASE_URL`      | [数据库生成教学](/doc/neon.md) |
-| `PASSWORD`          | 登录密码（任意设置）            |
-| `PRELOAD_NOTES_COUNT` | `10`（预加载笔记条数）        |
+- **前端：** Next.js + React + Tailwind CSS
+- **编辑器：** [Lexical](https://lexical.dev)
+- **数据库：** PostgreSQL（支持 Neon、Supabase、自建）
+- **部署：** Vercel / Docker
 
-### 4. 部署
+## 协议
 
-点击 `Deploy` 开始部署，初次部署大约需 **2 分钟**。完成后即可访问。
+[Apache License 2.0](LICENSE)
 
----
-
-## docker部署
-
-### 下载`docker-compose.yml`到你指定的文件夹中，修改几个参数,仅支持X86和arm64。
-
-password=motea
-
-PRELOAD_NOTES_COUNT=10  //也可以不改，反正容器的速度快，才几个K的传输
-
-COOKIE_SECURE=false //局域网就维持这个false吧。
-
-### 部署成功后有SSL证书，必须修改，因为依赖的验证与这2个相关。
-
-COOKIE_SECURE=true
-
-BASE_URL=http://localhost:3000 这里修改为你网页
-
----
-
-计划
-增加docker本地部署。所以你看到部分代码和config文件中存在supabase和自建postgresql的选项。
-
-## 📝 协议
-
-本项目基于 [Notea](https://github.com/notea-org/notea) 开源项目开发，遵循其 MIT License。原始版权声明已保留，感谢原作者的开源贡献。
-
----
-- 虽然原项目弃坑了，但一直都想复活它。无它，就因为它优雅。
-- 但又觉得本身基于S3作为存储是错误的选择，毕竟S3文件本身就不太支持重复修改，尤其是文件重命名对S3要求很高，而且各个对象存储版本都可能存在不统一的情况。所以我选择不向原项目提交 PR，而是直接进行独立改写与重构。
-- 本项目所有修改思路为个人原创设计，有使用AI协助编程，实在是存在个人水平达不到的高度。
-- 本来打算叫newnotea，不优雅，还是改为Motea算了，里面图标都不改了，致敬原创，致敬我的青春！
+基于 [Notea](https://github.com/notea-org/notea) 重构，感谢原作者 qingwei-li 的开源贡献。

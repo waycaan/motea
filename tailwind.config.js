@@ -11,10 +11,12 @@ module.exports = {
             blue: colors.blue,
             red: colors.red,
             yellow: colors.yellow,
+            green: colors.green,
             transparent: 'transparent',
             current: 'currentColor',
         },
         screens: {
+            xs: '480px',
             md: '768px',
             lg: '960px', // 半屏断点
         },

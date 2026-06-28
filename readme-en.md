@@ -1,73 +1,65 @@
-# What You Seek is Seeking You
+# motea
 
-This project is built upon the excellent open-source project [Notea](https://github.com/notea-org/notea), and fully complies with its MIT license. It introduces a series of improvements and refinements based on the original architecture, making it more suitable for deployment on [Vercel](https://vercel.com), especially in combination with [Neon](https://neon.tech)'s PostgreSQL database service.
+> What You Seek is Seeking You
 
-## 🌟 Project Highlights
+A modern note-taking app rebuilt from [Notea](https://github.com/notea-org/notea), keeping the original elegant UI design. Powered by [Lexical](https://lexical.dev) editor and PostgreSQL. Deploy to Vercel in minutes.
 
-- ✍️ Switched the editor to [Tiptap](https://tiptap.dev) for a true WYSIWYG editing experience.
+[Demo Video](https://www.bilibili.com/video/BV1KcTLzWENe/?vd_source=441079f1b64b3a1b4c28abe897343608)
 
-- 🧠 Retained support for / markdown command shortcuts and right-click floating markdown syntax menu.
+## Features
 
-- 💾 Switched to manual saving mode.
+- **Lexical Editor** — WYSIWYG editing with `/` slash commands and floating toolbar
+- **PostgreSQL Storage** — Replaces S3 for better stability and easier deployment
+- **Manual Save** — Ctrl+S to save, no more unpredictable auto-saves
+- **Note Management** — Archive, favorites, outline, batch operations
+- **Version History** — Not available in original Notea, supports version rollback and restore
+- **Markdown Compatible** — Standard Markdown syntax with a Typora-like experience
+- **Image Links** — Uses Markdown image links, works with any image hosting (try [Mazine](https://github.com/waycaan/mazine))
 
-- ⚙️ Refactored the upload and loading logic to align with the new editor and save strategy, reducing unnecessary function calls and improving performance.
+## Credits
 
-- 🧱 Maintained the original borderless note page layout.
+Based on [Notea](https://github.com/notea-org/notea) with the original UI design preserved. Thanks to [qingwei-li](https://github.com/qingwei-li) for creating this elegant project.
 
-- 🔐 Preserved the original authentication and encryption mechanism.
+## Deployment
 
-- 🔁 Kept the original note management and sharing logic.
+### Vercel + Neon (Recommended)
 
-- 🖼️ Removed local image upload support. All images are rendered using markdown image links, resulting in a more Typora-like experience.
+1. Fork this repository
+2. Import on [Vercel](https://vercel.com)
+3. Add environment variables:
 
-- 📦 For image upload and hosting, you can refer to my original project [Mazine](https://github.com/waycaan/mazine).
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string ([guide](/doc/neon.md)) |
+| `PASSWORD` | Login password |
+| `PRELOAD_NOTES_COUNT` | Notes to preload (default: 10) |
 
-## 🚀 Deployment (Recommended: Vercel + Neon)
+4. Click Deploy — ready in ~2 minutes
 
-> For best performance, please use the Neon database in Washington, D.C., USA (East). Since most users deploy on Vercel's free plan (with servers based in the U.S.), using this region ensures the lowest latency.
+> Use Neon's **Washington, D.C. (East)** region for lowest latency with Vercel.
 
-### 1. Fork This Repository
+### Docker
 
-Click the Fork button on the top right to copy the project into your GitHub account.
+```bash
+# Download docker-compose.yml, set these:
+# PASSWORD=your-password
+# COOKIE_SECURE=false (for LAN)
+# BASE_URL=http://localhost:3000
 
-### 2. Import into Vercel
+docker-compose up -d
+```
 
-Sign in to [Vercel](https://vercel.com), click Import Project, and select your newly forked repository.
+For SSL, set `COOKIE_SECURE=true`.
 
-### 3. Set Environment Variables
+## Tech Stack
 
-Go to Settings > Environment Variables in your Vercel project and add the following:
+- **Frontend:** Next.js + React + Tailwind CSS
+- **Editor:** [Lexical](https://lexical.dev)
+- **Database:** PostgreSQL (Neon, Supabase, or self-hosted)
+- **Deploy:** Vercel / Docker
 
-| Variable Name | Description or Example |
+## License
 
-|-----------------------|----------------------------------------|
+[Apache License 2.0](LICENSE)
 
-| DATABASE_URL | Your PostgreSQL connection string from Neon |
-
-| PASSWORD | Set your own login password |
-
-| PRELOAD_NOTES_COUNT | 10 (number of notes to preload) |
-
-### 4. Deploy
-
-Click Deploy to start the deployment. The initial setup takes about 2 minutes. Once complete, your note app is ready to use.
-
----
-
-## 📝 License
-
-This project is based on [Notea](https://github.com/notea-org/notea), and follows the terms of the MIT License. All original copyright statements are retained.
-
-Huge thanks to the original author for making it open-source.
-
----
-
-If you're looking for feature expansion, UI customization, or commercial deployment solutions, feel free to contact the author.
-
-Although the original project has been discontinued, I've always wanted to bring it back — simply because it's elegant.
-
-However, I believe using S3 as the core storage solution was a fundamental design flaw. S3 isn't well-suited for frequent modifications or file renaming, and the implementation varies across different object storage providers. Because of this, I chose not to submit a PR to the original repo, but instead rewrote and restructured the project independently.
-
-All redesign concepts in this project are entirely my own. That said, I did use AI tools to assist with development where the technical complexity exceeded my current personal capabilities.
-
-I originally wanted to call this project newnotea, but it didn’t feel elegant enough. So I named it Motea — keeping all the original icons untouched, as a tribute to the original project, and to my own youth.
+Based on [Notea](https://github.com/notea-org/notea) by qingwei-li. Thanks for the open-source contribution.
