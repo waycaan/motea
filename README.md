@@ -22,6 +22,7 @@
 
 ## 部署
 仓库代码暂未更新，docker版本已更新完成，原因是打算后续将motea修改为worker page来部署，部分代码可能需要进行更适配serverless的部署方式进行优化修改。所以只更新了docker版本的镜像。
+
 ~~### Vercel + Neon（推荐）~~
 
 ~~1. Fork 本项目~~
