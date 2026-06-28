@@ -21,12 +21,12 @@
 本项目基于 [Notea](https://github.com/notea-org/notea) 重构，UI 设计沿用原版风格。感谢原作者 [qingwei-li](https://github.com/qingwei-li) 和[notea团队](https://github.com/notea-org/notea)开源贡献，是他们创造了这个优雅的项目。
 
 ## 部署
+仓库代码暂未更新，docker版本已更新完成，原因是打算后续将motea修改为worker page来部署，部分代码可能需要进行更适配serverless的部署方式进行优化修改。所以只更新了docker版本的镜像。
+~~### Vercel + Neon（推荐）~~
 
-### Vercel + Neon（推荐）
-
-1. Fork 本项目
-2. 在 [Vercel](https://vercel.com) 导入项目
-3. 添加环境变量：
+~~1. Fork 本项目~~
+~~2. 在 [Vercel](https://vercel.com) 导入项目~~
+~~3. 添加环境变量：~~
 
 | 变量 | 说明 |
 |------|------|
@@ -34,11 +34,11 @@
 | `PASSWORD` | 登录密码 |
 | `PRELOAD_NOTES_COUNT` | 预加载笔记数（默认 10） |
 
-4. 点击 Deploy，约 2 分钟完成
+~~4. 点击 Deploy，约 2 分钟完成~~
 
-> 建议使用 Neon 的 **Washington, D.C. (East)** 区域，与 Vercel 主机同区延迟最低。
+> ~~建议使用 Neon 的 **Washington, D.C. (East)** 区域，与 Vercel 主机同区延迟最低。~~
 
-### Docker
+### Docker 推荐
 
 ```bash
 # 下载 docker-compose.yml，修改以下参数：
