@@ -63,3 +63,7 @@ docker-compose up -d
 [Apache License 2.0](LICENSE)
 
 基于 [Notea](https://github.com/notea-org/notea) 重构，感谢原作者 qingwei-li 及 notea团队 的开源贡献。
+---
+改动很大，docker-compose.yml可以直接部署，vercel版本尚未测试，有点想直接改为page来部署（待定），补充了一大堆功能增强，修复了一大堆TS错误，基本上是最终版本。
+有1个bug未修
+1. lexical初始化时，使用中文输入会出现想打恭喜发财，会变成gong`xi`fa`cai，删除后再次输入即可。（这个情况只会出现在刚打开应用时出现，其他情况测试都没有问题），貌似不是IME的问题。影响不大。
