@@ -6,7 +6,7 @@
 
 [演示视频](https://www.bilibili.com/video/BV1KcTLzWENe/?vd_source=441079f1b64b3a1b4c28abe897343608)
 ## 新功能更新
-![notea.gif](/doc/notea.gif)
+[新功能查看](https://www.bilibili.com/video/BV1xJTG6YEjt?t=28.9)
 ## 新玩法（chrome的拆分视图）
 ![seperated.png](/doc/seperated.png)
 ## 特性
