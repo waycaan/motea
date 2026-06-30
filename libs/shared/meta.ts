@@ -8,9 +8,20 @@ export enum NOTE_SHARED {
     PUBLIC,
 }
 
-export enum NOTE_PINNED {
-    UNPINNED,
-    PINNED,
+export enum NOTE_ARCHIVED {
+    UNARCHIVED,
+    ARCHIVED,
+}
+
+export enum NOTE_STARRED {
+    UNSTARRED,
+    STARRED,
+}
+
+export enum NOTE_STATUS {
+    NORMAL = 0,
+    ARCHIVED = 1,
+    STARRED = 2,
 }
 
 export enum EDITOR_SIZE {
@@ -27,8 +38,10 @@ export const PAGE_META_KEY = <const>[
     'pic',
     'date',
     'deleted',
-    'pinned',
+    'archived',
+    'starred',
     'editorsize',
+    'hasVersions',
 ];
 
 export type metaKey = typeof PAGE_META_KEY[number];
@@ -36,6 +49,7 @@ export type metaKey = typeof PAGE_META_KEY[number];
 export const NUMBER_KEYS: metaKey[] = [
     'deleted',
     'shared',
-    'pinned',
+    'archived',
+    'starred',
     'editorsize',
 ];

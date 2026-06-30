@@ -32,6 +32,8 @@ export function convertHtmlToMarkdown(html: string): string {
     markdown = markdown.replace(/<del>(.*?)<\/del>/gi, '~~$1~~');
     markdown = markdown.replace(/<s>(.*?)<\/s>/gi, '~~$1~~');
     markdown = markdown.replace(/<code>(.*?)<\/code>/gi, '`$1`');
+    markdown = markdown.replace(/<u>(.*?)<\/u>/gi, '<u>$1</u>');
+    markdown = markdown.replace(/<mark>(.*?)<\/mark>/gi, '==$1==');
 
     // Links
     markdown = markdown.replace(/<a href="(.*?)">(.*?)<\/a>/gi, '[$2]($1)');
@@ -41,21 +43,44 @@ export function convertHtmlToMarkdown(html: string): string {
     markdown = markdown.replace(/<img src="(.*?)"\s*\/?>/gi, '![]($1)'); // Image without alt
 
     // Lists (simplified - does not handle nested lists well)
-    markdown = markdown.replace(/<ul>(.*?)<\/ul>/gis, (match, p1) => {
+    markdown = markdown.replace(/<ul>(.*?)<\/ul>/gis, (_match, p1) => {
         return p1.replace(/<li>(.*?)<\/li>/gi, '- $1\n');
     });
-    markdown = markdown.replace(/<ol>(.*?)<\/ol>/gis, (match, p1) => {
+    markdown = markdown.replace(/<ol>(.*?)<\/ol>/gis, (_match, p1) => {
         let i = 1;
         return p1.replace(/<li>(.*?)<\/li>/gi, () => `${i++}. $1\n`);
     });
 
     // Blockquotes (simplified)
-    markdown = markdown.replace(/<blockquote>(.*?)<\/blockquote>/gis, (match, p1) => {
-        return p1.split('\n').map(line => `> ${line}`).join('\n') + '\n\n';
+    markdown = markdown.replace(/<blockquote>(.*?)<\/blockquote>/gis, (_match, p1) => {
+        return p1.split('\n').map((line: string) => `> ${line}`).join('\n') + '\n\n';
+    });
+
+    // Tables
+    markdown = markdown.replace(/<table>(.*?)<\/table>/gis, (_match, p1) => {
+        const rows: string[] = [];
+        const rowMatches = p1.match(/<tr>(.*?)<\/tr>/gis) || [];
+        rowMatches.forEach((rowMatch: string) => {
+            const cells: string[] = [];
+            const cellMatches = rowMatch.match(/<t[hd]>(.*?)<\/t[hd]>/gis) || [];
+            cellMatches.forEach((cellMatch: string) => {
+                const text = cellMatch.replace(/<[^>]+>/g, '').trim() || ' ';
+                cells.push(text);
+            });
+            if (cells.length > 0) {
+                rows.push('| ' + cells.join(' | ') + ' |');
+            }
+        });
+        if (rows.length > 0) {
+            const separator = '| ' + rows[0].split('|').slice(1, -1).map(() => '---').join(' | ') + ' |';
+            rows.splice(1, 0, separator);
+            return '\n' + rows.join('\n') + '\n\n';
+        }
+        return '';
     });
 
     // Code blocks (simplified, assumes pre > code structure)
-    markdown = markdown.replace(/<pre><code(?: class="language-(.*?)")?>(.*?)<\/code><\/pre>/gis, (match, lang, code) => {
+    markdown = markdown.replace(/<pre><code(?: class="language-(.*?)")?>(.*?)<\/code><\/pre>/gis, (_match, lang, code) => {
         const language = lang || '';
         return '```' + language + '\n' + code.trim() + '\n```\n\n';
     });

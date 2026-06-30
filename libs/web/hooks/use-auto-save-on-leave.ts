@@ -18,6 +18,11 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 
+interface WindowWithSaveButton extends Window {
+    saveButtonStatus?: 'save' | 'saved' | 'pending';
+    saveButtonAutoSave?: () => Promise<boolean>;
+}
+
 interface UseAutoSaveOnLeaveOptions {
     enabled?: boolean;
 }
@@ -29,19 +34,23 @@ const useAutoSaveOnLeave = (options: UseAutoSaveOnLeaveOptions = {}) => {
 
 
     const shouldAutoSave = useCallback(() => {
-        if (typeof window !== 'undefined' && (window as any).saveButtonStatus) {
-            return (window as any).saveButtonStatus === 'save';
+        if (typeof window !== 'undefined') {
+            const win = window as WindowWithSaveButton;
+            return win.saveButtonStatus === 'save';
         }
         return false;
     }, []);
 
     const performAutoSave = useCallback(async () => {
-        if (typeof window !== 'undefined' && (window as any).saveButtonAutoSave) {
-            try {
-                await (window as any).saveButtonAutoSave();
-                return true;
-            } catch (error) {
-                return false;
+        if (typeof window !== 'undefined') {
+            const win = window as WindowWithSaveButton;
+            if (win.saveButtonAutoSave) {
+                try {
+                    await win.saveButtonAutoSave();
+                    return true;
+                } catch (error) {
+                    return false;
+                }
             }
         }
         return false;

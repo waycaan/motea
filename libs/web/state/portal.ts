@@ -1,6 +1,5 @@
 import { NoteModel } from 'libs/shared/note';
 import { useState, useCallback } from 'react';
-import RichMarkdownEditor from '@notea/rich-markdown-editor';
 import { createContainer } from 'unstated-next';
 
 const useModalInstance = () => {
@@ -42,7 +41,6 @@ const useModal = () => {
         preview: useAnchorInstance<{ id?: string }>(),
         linkToolbar: useAnchorInstance<{
             href: string;
-            view?: RichMarkdownEditor['view'];
         }>(),
         editorWidthSelect: useAnchorInstance<NoteModel>()
     };

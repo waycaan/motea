@@ -42,8 +42,6 @@ export function useCsrf(req: ApiRequest, res: ApiResponse, next: ApiNext) {
     if (
         token &&
         sessionToken &&
-        // TODO: sometimes not equal
-        // token === sessionToken &&
         verifyCsrfToken(token) &&
         verifyCsrfToken(sessionToken)
     ) {

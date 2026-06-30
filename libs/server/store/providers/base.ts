@@ -5,6 +5,13 @@ export interface StoreProviderConfig {
 export interface ObjectOptions {
     meta?: { [key: string]: string };
     contentType?: string;
+    parent_id?: string;
+    title?: string;
+    deleted?: number;
+    shared?: number;
+    starred?: number;
+    has_versions?: boolean;
+    status?: number;
     headers?: {
         cacheControl?: string;
         contentDisposition?: string;
@@ -113,5 +120,24 @@ export abstract class StoreProvider {
         updated_at?: string;
     }>> {
         return Promise.all(paths.map(path => this.getObjectAndMeta(path)));
+    }
+
+    /**
+     * 获取指定状态的笔记列表
+     */
+    async getNotesByStatus(_status: number): Promise<Array<{
+        id: string;
+        status: number;
+        sort_order: number;
+        metadata: Record<string, any>;
+        path?: string;
+        parent_id?: string;
+        title?: string;
+        deleted?: number;
+        shared?: number;
+        starred?: number;
+        has_versions?: boolean;
+    }>> {
+        return [];
     }
 }

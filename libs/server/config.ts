@@ -105,6 +105,7 @@ export function loadConfigAndListErrors(): {
             errors.push(issue(e));
         }
     }
+    void tryElseAddError;
 
     let baseConfig: Configuration = {} as Configuration;
     if (existsSync(configFile)) {
@@ -261,7 +262,7 @@ export function loadConfigAndListErrors(): {
     const postgresUrl = env.getEnvRaw('DATABASE_URL', false);
     const supabaseUrl = env.getEnvRaw('SUPABASE_URL', false);
     const supabaseKey = env.getEnvRaw('SUPABASE_ANON_KEY', false);
-    const dbProvider = env.getEnvRaw('DB_PROVIDER', false);
+    const dbProvider = env.getEnvRaw('DB_PROVIDER' as any, false);
 
     let provider: 'self-hosted' | 'supabase' | 'neon' = 'self-hosted';
     let connectionString = postgresUrl || '';

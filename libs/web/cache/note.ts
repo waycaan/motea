@@ -1,27 +1,14 @@
-/**
- * Note Cache
- *
- * Copyright (c) 2025 waycaan
- * Licensed under the MIT License
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- */
-
 import { TreeModel } from 'libs/shared/tree';
 import { noteCacheInstance, NoteCacheItem } from 'libs/web/cache';
 import { isNoteLink, NoteModel } from 'libs/shared/note';
+import { NOTE_DELETED } from 'libs/shared/meta';
 import { keys, pull } from 'lodash';
 import { removeMarkdown } from '../utils/markdown';
 
-
+/**
+ * 🔗 简单的 Markdown 链接提取器
+ * 替换 markdown-link-extractor 以避免依赖冲突
+ */
 function extractMarkdownLinks(content: string): string[] {
     const links: string[] = [];
 
@@ -47,6 +34,7 @@ function extractMarkdownLinks(content: string): string[] {
 
 /**
  * 清除本地存储中未使用的 note
+ * 保留已删除的笔记（deleted: NOTE_DELETED.DELETED）供回收站使用
  */
 async function checkItems(items: TreeModel['items']) {
     const noteIds = keys(items);
@@ -54,7 +42,14 @@ async function checkItems(items: TreeModel['items']) {
     const unusedNoteIds = pull(localNoteIds, ...noteIds);
 
     await Promise.all(
-        unusedNoteIds.map((id) => (id ? noteCache.removeItem(id) : undefined))
+        unusedNoteIds.map(async (id) => {
+            if (!id) return;
+            const note = await getItem(id);
+            if (note && note.deleted === NOTE_DELETED.DELETED) {
+                return;
+            }
+            return noteCache.removeItem(id);
+        })
     );
 }
 
@@ -83,7 +78,7 @@ async function mutateItem(id: string, body: Partial<NoteModel>) {
     const note = await getItem(id);
 
     if (!note) {
-        throw new Error('not found note cache:' + id);
+        return;
     }
 
     await setItem(id, {

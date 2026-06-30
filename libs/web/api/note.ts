@@ -1,4 +1,5 @@
 import { NoteModel } from 'libs/shared/note';
+import { NOTE_STATUS } from 'libs/shared/meta';
 import { useCallback } from 'react';
 import noteCache from '../cache/note';
 import useFetcher from './fetcher';
@@ -52,6 +53,19 @@ export default function useNoteAPI() {
         [request]
     );
 
+    const updateStatus = useCallback(
+        async (ids: string[], status: NOTE_STATUS, pid?: string) => {
+            return request<{ ids: string[]; status: NOTE_STATUS; pid?: string }, { updated: number; ids: string[] }>(
+                {
+                    method: 'POST',
+                    url: `/api/notes/status`,
+                },
+                { ids, status, pid }
+            );
+        },
+        [request]
+    );
+
     // fetch note from cache or api
     const fetch = useCallback(
         async (id: string) => {
@@ -76,6 +90,7 @@ export default function useNoteAPI() {
         find,
         create,
         mutate,
+        updateStatus,
         fetch,
     };
 }

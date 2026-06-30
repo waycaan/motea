@@ -10,7 +10,7 @@ export function getPreloadNotesCount(): number {
     if (envValue) {
         const parsed = parseInt(envValue, 10);
         if (!isNaN(parsed) && parsed > 0) {
-            console.log(`📊 使用环境变量配置: 预加载 ${parsed} 个笔记`);
+
             return Math.min(parsed, 100); 
         }
     }
@@ -24,7 +24,7 @@ export function getPreloadNotesCount(): number {
     };
 
     const defaultCount = defaults[platform];
-    console.log(`📊 使用 ${platform} 平台默认配置: 预加载 ${defaultCount} 个笔记`);
+
     return defaultCount;
 }
 

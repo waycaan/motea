@@ -1,9 +1,9 @@
-import { IncomingForm, File } from 'formidable';
+import formidable from 'formidable';
 import { ApiRequest } from './connect';
 
-export function readFileFromRequest(req: ApiRequest): Promise<File> {
+export function readFileFromRequest(req: ApiRequest): Promise<any> {
     return new Promise((resolve, reject): void => {
-        const form = new IncomingForm();
+        const form = formidable({});
 
         form.parse(req, (err, _fields, files) => {
             if (err) return reject(err);

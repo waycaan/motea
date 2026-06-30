@@ -1,36 +1,37 @@
 /**
- * Content Hash Utility
- *
- * Copyright (c) 2025 waycaan
- * Licensed under the MIT License
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * 内容哈希工具
+ * 
+ * 用于优化内容比较性能，避免频繁的JSON序列化
+ * 特别适用于编辑器内容变化检测
  */
 
+/**
+ * 简单快速的字符串哈希函数
+ * 基于djb2算法，性能优于JSON.stringify比较
+ */
 export function fastHash(str: string): number {
     let hash = 5381;
     for (let i = 0; i < str.length; i++) {
         hash = ((hash << 5) + hash) + str.charCodeAt(i);
     }
-    return hash >>> 0;
+    return hash >>> 0; // 确保返回无符号32位整数
 }
 
+/**
+ * 为JSON对象创建哈希
+ * 先序列化再哈希，但缓存序列化结果
+ */
 export function jsonHash(obj: any): number {
     if (obj === null || obj === undefined) {
         return 0;
     }
-
+    
+    // 对于简单类型，直接转换
     if (typeof obj !== 'object') {
         return fastHash(String(obj));
     }
+    
+    // 对于对象，序列化后哈希
     try {
         const jsonStr = JSON.stringify(obj);
         return fastHash(jsonStr);
@@ -40,13 +41,20 @@ export function jsonHash(obj: any): number {
     }
 }
 
-
+/**
+ * 内容比较器类
+ * 提供高效的内容变化检测
+ */
 export class ContentComparator {
     private lastHash: number = 0;
     private lastContent: string = '';
     private hashCache = new Map<string, number>();
     
-
+    /**
+     * 检查内容是否发生变化
+     * @param content 要检查的内容
+     * @returns 是否发生变化
+     */
     hasChanged(content: string): boolean {
         // 快速检查：如果内容完全相同，直接返回false
         if (content === this.lastContent) {
@@ -73,15 +81,7 @@ export class ContentComparator {
             this.hashCache.set(content, newHash);
         }
         
-        // 比较哈希
-        const changed = newHash !== this.lastHash;
-        
-        if (changed) {
-            this.lastHash = newHash;
-            this.lastContent = content;
-        }
-        
-        return changed;
+        return newHash !== this.lastHash;
     }
     
     /**

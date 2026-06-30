@@ -1,4 +1,4 @@
-import { EDITOR_SIZE, NOTE_DELETED, NOTE_PINNED, NOTE_SHARED } from './meta';
+import { EDITOR_SIZE, NOTE_ARCHIVED, NOTE_DELETED, NOTE_SHARED, NOTE_STARRED, NOTE_STATUS } from './meta';
 
 export interface NoteModel {
     id: string;
@@ -9,10 +9,13 @@ export interface NoteModel {
     date?: string;
     deleted: NOTE_DELETED;
     shared: NOTE_SHARED;
-    pinned: NOTE_PINNED;
+    archived: NOTE_ARCHIVED;
+    starred: NOTE_STARRED;
+    status: NOTE_STATUS;
     editorsize: EDITOR_SIZE | null;
     isDailyNote?: boolean; 
     updated_at?: string; 
+    hasVersions?: boolean;
 }
 
 

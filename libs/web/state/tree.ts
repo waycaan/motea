@@ -1,23 +1,6 @@
-/**
- * Tree State Management
- *
- * Copyright (c) 2025 waycaan
- * Licensed under the MIT License
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- */
-
-import { cloneDeep, forEach, isEmpty, map, reduce } from 'lodash';
+import { isEmpty, map, reduce } from 'lodash';
 import { genId } from 'libs/shared/id';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createContainer } from 'unstated-next';
 import TreeActions, {
     DEFAULT_TREE,
@@ -29,10 +12,11 @@ import TreeActions, {
 import useNoteAPI from '../api/note';
 import noteCache from '../cache/note';
 import useTreeAPI from '../api/tree';
-import { NOTE_DELETED, NOTE_PINNED } from 'libs/shared/meta';
+import { NOTE_DELETED, NOTE_STATUS } from 'libs/shared/meta';
 import { NoteModel } from 'libs/shared/note';
 import { useToast } from '../hooks/use-toast';
 import { uiCache } from '../cache';
+import UIState from './ui';
 
 const TREE_CACHE_KEY = 'tree';
 
@@ -56,143 +40,130 @@ const findParentTreeItems = (tree: TreeModel, note: NoteModel) => {
 const useNoteTree = (initData: TreeModel = DEFAULT_TREE) => {
     const { mutate, loading, fetch: fetchTree } = useTreeAPI();
     const [tree, setTree] = useState<TreeModel>(initData);
+    const [archivedTree, setArchivedTree] = useState<TreeModel>({ rootId: ROOT_ID, items: {} });
+    const [starredTree, setStarredTree] = useState<TreeModel>({ rootId: ROOT_ID, items: {} });
     const [initLoaded, setInitLoaded] = useState<boolean>(false);
     const { fetch: fetchNote } = useNoteAPI();
+    const fetchNoteRef = useRef(fetchNote);
     const treeRef = useRef(tree);
     const toast = useToast();
+    const { settings } = UIState.useContainer();
 
     useEffect(() => {
         treeRef.current = tree;
     }, [tree]);
 
-    const fetchNotes = useCallback(
-        async (tree: TreeModel) => {
-            // 🎯 智能预载配置：根据环境和笔记数量动态调整
-            const basePreloadCount = parseInt(process.env.PRELOAD_NOTES_COUNT || '10', 10);
-            const totalNotes = Object.keys(tree.items).filter(id => id !== ROOT_ID).length;
-
-            // 📊 根据笔记总数智能调整预载数量
-            let preloadCount = basePreloadCount;
-            if (totalNotes <= 20) {
-                preloadCount = Math.min(totalNotes, basePreloadCount); // 笔记少时全部预载
-            } else if (totalNotes > 100) {
-                preloadCount = Math.max(5, Math.min(basePreloadCount, 15)); // 笔记多时限制预载
-            }
-
-            console.log(`⚙️ 智能预加载配置: ${preloadCount}/${totalNotes} 个笔记 (基础配置: ${basePreloadCount})`);
-
-            const allNotes = Object.values(tree.items)
-                .filter(item => item.id !== ROOT_ID && item.data)
-                .sort((a, b) => {
-                    const timeA = a.data?.updated_at ? new Date(a.data.updated_at).getTime() : 0;
-                    const timeB = b.data?.updated_at ? new Date(b.data.updated_at).getTime() : 0;
-                    return timeB - timeA;
-                });
-
-            const priorityNotes = allNotes.slice(0, preloadCount);
-            const otherNotes = allNotes.slice(preloadCount);
-
-            console.log(`📊 Total notes: ${allNotes.length}, Priority: ${priorityNotes.length}, Others: ${otherNotes.length}`);
-
-            const priorityNotesToLoad: string[] = [];
-
-            for (const item of priorityNotes) {
-                const cache = await noteCache.getItem(item.id);
-
-                if (cache && item.data?.updated_at && cache.updated_at === item.data.updated_at) {
-                    tree.items[item.id].data = {
-                        ...item.data,
-                        ...cache,
-                    };
-                    console.log(`✅ Cache hit for priority note: ${item.id}`);
-                } else {
-                    if (cache) {
-                        console.log(`🗑️ Clearing stale cache for note: ${item.id} (meta_time: ${item.data?.updated_at}, cache_time: ${cache?.updated_at})`);
-                        await noteCache.removeItem(item.id);
-                    }
-
-                    priorityNotesToLoad.push(item.id);
-                    console.log(`📡 Will fetch priority note: ${item.id} (cache: ${!!cache}, meta_time: ${item.data?.updated_at}, cache_time: ${cache?.updated_at})`);
-                }
-            }
-
-            for (const item of otherNotes) {
-                const cache = await noteCache.getItem(item.id);
-
-                if (cache && item.data?.updated_at && cache.updated_at === item.data.updated_at) {
-                    tree.items[item.id].data = {
-                        ...item.data,
-                        ...cache,
-                    };
-                    console.log(`✅ Cache hit for other note: ${item.id}`);
-                } else {
-                    if (cache) {
-                        console.log(`🗑️ Clearing stale cache for other note: ${item.id} (meta_time: ${item.data?.updated_at}, cache_time: ${cache?.updated_at})`);
-                        await noteCache.removeItem(item.id);
-                    }
-
-                    console.log(`⏳ Cache miss for other note: ${item.id}, will load on demand (has metadata: ${!!item.data})`);
-                }
-            }
-
-            if (priorityNotesToLoad.length > 0) {
-                console.log(`🚀 Loading ${priorityNotesToLoad.length} priority notes from API`);
-
-                await Promise.all(
-                    priorityNotesToLoad.map(async (id) => {
-                        try {
-                            const noteData = await fetchNote(id);
-                            tree.items[id].data = {
-                                ...tree.items[id].data,
-                                ...noteData,
-                                id,
-                            } as NoteModel;
-                            console.log(`✅ Loaded priority note: ${id}`);
-                        } catch (error) {
-                            console.error(`❌ Failed to load priority note ${id}:`, error);
-                        }
-                    })
-                );
-            }
-
-            console.log(`🎯 Optimization complete: ${priorityNotesToLoad.length} API requests instead of ${allNotes.length}`);
-
-            return tree;
-        },
-        [fetchNote]
-    );
+    useEffect(() => {
+        fetchNoteRef.current = fetchNote;
+    }, [fetchNote]);
 
     const initTree = useCallback(async () => {
         const cache = await uiCache.getItem<TreeModel>(TREE_CACHE_KEY);
         if (cache) {
-            const treeWithNotes = await fetchNotes(cache);
-            setTree(treeWithNotes);
+            setTree(cache);
+            setInitLoaded(true);
         }
-        const tree = await fetchTree();
+
+        // Phase 6: fetch tree with status=0 (NORMAL)
+        const tree = await fetchTree(0);
 
         if (!tree) {
-            toast('Failed to load tree', 'error');
+            if (!cache) {
+                toast('Failed to load tree', 'error');
+            }
             return;
         }
 
-
-        const treeWithNotes = await fetchNotes(tree);
-
-        setTree(treeWithNotes);
+        // Only update if tree data actually changed
+        const cacheJSON = cache ? JSON.stringify(cache.items) : '';
+        const treeJSON = JSON.stringify(tree.items);
+        if (cacheJSON !== treeJSON) {
+            setTree(tree);
+        }
         await Promise.all([
             uiCache.setItem(TREE_CACHE_KEY, tree),
             noteCache.checkItems(tree.items),
         ]);
 
-        // Tree initialization complete
-
         setInitLoaded(true);
-    }, [fetchNotes, fetchTree, toast]);
+
+        // Preload top-level notes content in background (skip history folders and their snapshots)
+        const HISTORY_FOLDER_TITLE = '历史版本';
+        const preloadCount = settings?.settings?.preload_notes_count ?? 10;
+        const topLevelIds = (tree.items[ROOT_ID]?.children || [])
+            .filter(id => {
+                const item = tree.items[id];
+                return item?.data && item.data.title !== HISTORY_FOLDER_TITLE;
+            })
+            .sort((a, b) => {
+                const timeA = tree.items[a]?.data?.updated_at ? new Date(tree.items[a].data!.updated_at!).getTime() : 0;
+                const timeB = tree.items[b]?.data?.updated_at ? new Date(tree.items[b].data!.updated_at!).getTime() : 0;
+                return timeB - timeA;
+            })
+            .slice(0, preloadCount);
+
+        for (const id of topLevelIds) {
+            try {
+                const cached = await noteCache.getItem(id);
+                if (cached && tree.items[id]?.data?.updated_at &&
+                    cached.updated_at === tree.items[id]?.data?.updated_at) {
+                    continue;
+                }
+                await fetchNoteRef.current(id);
+            } catch {}
+        }
+
+        // Preload STARRED tree + top-level starred notes content in background
+        fetchTree(NOTE_STATUS.STARRED).then(async (starredTree) => {
+            if (starredTree) {
+                setStarredTree(starredTree);
+                // Preload top-level starred notes content (skip history folders)
+                const starredTopLevelIds = (starredTree.items[ROOT_ID]?.children || [])
+                    .filter(id => {
+                        const item = starredTree.items[id];
+                        return item?.data && item.data.title !== HISTORY_FOLDER_TITLE;
+                    });
+                await Promise.all(
+                    starredTopLevelIds.map(async (id) => {
+                        try {
+                            const cached = await noteCache.getItem(id);
+                            if (cached && starredTree.items[id]?.data?.updated_at &&
+                                cached.updated_at === starredTree.items[id]?.data?.updated_at) {
+                                return;
+                            }
+                            await fetchNoteRef.current(id);
+                        } catch {}
+                    })
+                );
+            }
+        }).catch(() => {});
+
+        // Preload ARCHIVED tree structure only (content loaded on demand)
+        fetchTree(NOTE_STATUS.ARCHIVED).then((archivedTree) => {
+            if (archivedTree) {
+                setArchivedTree(archivedTree);
+            }
+        }).catch(() => {});
+    }, [fetchTree, toast]);
+
+    const loadArchivedTree = useCallback(async () => {
+        const tree = await fetchTree(NOTE_STATUS.ARCHIVED);
+        if (tree) {
+            setArchivedTree(tree);
+        }
+    }, [fetchTree]);
+
+    const loadStarredTree = useCallback(async () => {
+        const tree = await fetchTree(NOTE_STATUS.STARRED);
+        if (tree) {
+            setStarredTree(tree);
+        }
+    }, [fetchTree]);
 
     const loadNoteOnDemand = useCallback(async (noteId: string) => {
         const currentItem = treeRef.current.items[noteId];
         if (!currentItem) {
-            console.error(`❌ Note ${noteId} not found in tree`);
+            console.error(`Note ${noteId} not found in tree`);
             return null;
         }
 
@@ -200,44 +171,36 @@ const useNoteTree = (initData: TreeModel = DEFAULT_TREE) => {
         const serverMeta = currentItem.data;
 
         if (cache && serverMeta?.updated_at && cache.updated_at !== serverMeta.updated_at) {
-            console.log(`🗑️ Clearing stale cache for on-demand note: ${noteId} (meta_time: ${serverMeta.updated_at}, cache_time: ${cache.updated_at})`);
             await noteCache.removeItem(noteId);
         }
 
         if (currentItem.data && currentItem.data.content !== undefined &&
             cache && serverMeta?.updated_at && cache.updated_at === serverMeta.updated_at) {
-            console.log(`✅ Note ${noteId} already loaded`);
             return currentItem.data;
         }
 
         try {
-            console.log(`🔄 Loading note ${noteId} on demand...`);
-            const noteData = await fetchNote(noteId);
-
+            const noteData = await fetchNoteRef.current(noteId);
             const updatedTree = TreeActions.mutateItem(treeRef.current, noteId, {
                 data: noteData
             });
             setTree(updatedTree);
-
-            console.log(`✅ Successfully loaded note ${noteId} on demand`);
             return noteData;
         } catch (error) {
-            console.error(`❌ Failed to load note ${noteId} on demand:`, error);
+            console.error(`Failed to load note ${noteId}:`, error);
             toast('Failed to load note', 'error');
             return null;
         }
-    }, [fetchNote, toast]);
+    }, [toast]);
 
     const addItem = useCallback((item: NoteModel) => {
         const tree = TreeActions.addItem(treeRef.current, item.id, item.pid);
-
         tree.items[item.id].data = item;
         setTree(tree);
     }, []);
 
     const removeItem = useCallback(async (id: string) => {
         const tree = TreeActions.removeItem(treeRef.current, id);
-
         setTree(tree);
         await Promise.all(
             map(
@@ -260,16 +223,33 @@ const useNoteTree = (initData: TreeModel = DEFAULT_TREE) => {
 
     const moveItem = useCallback(
         async (data: { source: MovePosition; destination: MovePosition }) => {
-            setTree(
-                TreeActions.moveItem(
-                    treeRef.current,
-                    data.source,
-                    data.destination
-                )
+            const sourceParentId = String(data.source.parentId);
+            const destParentId = String(data.destination.parentId);
+
+            // Phase 6: optimistically update local tree
+            const updatedTree = TreeActions.moveItem(
+                treeRef.current,
+                data.source,
+                data.destination
             );
+            setTree(updatedTree);
+
+            // Build sibling IDs from the already-computed updatedTree
+            const destSiblingIds = updatedTree.items[destParentId]?.children || [];
+            const sourceSiblingIds = updatedTree.items[sourceParentId]?.children || [];
+
+            // Phase 6: send to server with new format
+            const sourceId = treeRef.current.items[sourceParentId]?.children[data.source.index];
             await mutate({
                 action: 'move',
-                data,
+                data: {
+                    sourceId,
+                    destinationPid: destParentId,
+                    destinationIndex: data.destination.index,
+                    destSiblingIds,
+                    sourceParentId,
+                    sourceSiblingIds,
+                },
             });
         },
         [mutate]
@@ -278,12 +258,14 @@ const useNoteTree = (initData: TreeModel = DEFAULT_TREE) => {
     const mutateItem = useCallback(
         async (id: string, data: Partial<TreeItemModel>) => {
             setTree(TreeActions.mutateItem(treeRef.current, id, data));
-            delete data.data;
-            if (!isEmpty(data)) {
+            // Phase 6: isExpanded is client-only, no server mutation needed
+            // Only send non-data mutations to server (e.g., isExpanded)
+            const { data: _, ...dataWithoutData } = data;
+            if (!isEmpty(dataWithoutData)) {
                 await mutate({
                     action: 'mutate',
                     data: {
-                        ...data,
+                        ...dataWithoutData,
                         id,
                     },
                 });
@@ -294,7 +276,6 @@ const useNoteTree = (initData: TreeModel = DEFAULT_TREE) => {
 
     const restoreItem = useCallback(async (id: string, pid: string) => {
         const tree = TreeActions.restoreItem(treeRef.current, id, pid);
-
         setTree(tree);
         await Promise.all(
             map(
@@ -369,33 +350,10 @@ const useNoteTree = (initData: TreeModel = DEFAULT_TREE) => {
             .catch((v) => console.error('Error whilst collapsing item: %O', v));
     }, [setItemsExpandState]);
 
-    const pinnedTree = useMemo(() => {
-        const items = cloneDeep(tree.items);
-        const pinnedIds: string[] = [];
-        forEach(items, (item) => {
-            if (
-                item.data?.pinned === NOTE_PINNED.PINNED &&
-                item.data.deleted !== NOTE_DELETED.DELETED
-            ) {
-                pinnedIds.push(item.id);
-            }
-        });
-
-        items[ROOT_ID] = {
-            id: ROOT_ID,
-            children: pinnedIds,
-            isExpanded: true,
-        };
-
-        return {
-            ...tree,
-            items,
-        };
-    }, [tree]);
-
     return {
         tree,
-        pinnedTree,
+        archivedTree,
+        starredTree,
         initTree,
         genNewId,
         addItem,
@@ -409,6 +367,8 @@ const useNoteTree = (initData: TreeModel = DEFAULT_TREE) => {
         checkItemIsShown,
         collapseAllItems,
         loadNoteOnDemand,
+        loadArchivedTree,
+        loadStarredTree,
         loading,
         initLoaded,
     };

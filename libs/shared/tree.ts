@@ -38,14 +38,14 @@ function addItem(tree: TreeModel, id: string, pid = ROOT_ID) {
         children: [],
     };
 
-    const parentItem = newTree.items[pid];
+    // If parent doesn't exist, fall back to ROOT_ID
+    const actualPid = newTree.items[pid] ? pid : ROOT_ID;
+    const parentItem = newTree.items[actualPid];
 
     if (parentItem) {
         if (!parentItem.children.includes(id)) {
             parentItem.children = [...parentItem.children, id];
         }
-    } else {
-        throw new Error(`Parent ID '${pid}' does not refer to a valid item`);
     }
 
     return newTree;

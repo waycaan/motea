@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import useFetcher from './fetcher';
 
 interface MutateBody {
-    action: 'move' | 'mutate';
+    action: 'move' | 'mutate' | 'reorder';
     data: any;
 }
 
@@ -23,10 +23,10 @@ export default function useTreeAPI() {
         [request]
     );
 
-    const fetch = useCallback(async () => {
+    const fetch = useCallback(async (status: number = 0) => {
         return request<undefined, TreeModel>({
             method: 'GET',
-            url: '/api/tree',
+            url: `/api/tree?status=${status}`,
         });
     }, [request]);
 

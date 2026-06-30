@@ -11,6 +11,9 @@ export interface Settings {
     locale: Locale;
     injection?: string;
     editorsize: EDITOR_SIZE;
+    trash_expiry_days: number;
+    preload_notes_count: number;
+    auto_archive_days: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = Object.freeze({
@@ -19,6 +22,9 @@ export const DEFAULT_SETTINGS: Settings = Object.freeze({
     sidebar_is_fold: false,
     locale: Locale.EN,
     editorsize: EDITOR_SIZE.SMALL,
+    trash_expiry_days: 1,
+    preload_notes_count: 10,
+    auto_archive_days: 0,
 });
 
 export function formatSettings(body: Record<string, any> = {}) {
@@ -58,6 +64,16 @@ export function formatSettings(body: Record<string, any> = {}) {
 
     if (isNumber(body.editorsize)) {
         settings.editorsize = body.editorsize;
+    }
+
+    if (isNumber(body.trash_expiry_days) && body.trash_expiry_days >= 0) {
+        settings.trash_expiry_days = Math.min(body.trash_expiry_days, 365);
+    }
+    if (isNumber(body.preload_notes_count) && body.preload_notes_count >= 0) {
+        settings.preload_notes_count = Math.min(body.preload_notes_count, 100);
+    }
+    if (isNumber(body.auto_archive_days) && body.auto_archive_days >= 0) {
+        settings.auto_archive_days = Math.min(body.auto_archive_days, 365);
     }
 
     return settings;

@@ -1,24 +1,7 @@
-/**
- * Note State Management
- *
- * Copyright (c) 2025 waycaan
- * Licensed under the MIT License
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- */
-
 import { useCallback, useState } from 'react';
 import { createContainer } from 'unstated-next';
 import NoteTreeState from 'libs/web/state/tree';
-import { NOTE_DELETED, NOTE_PINNED, NOTE_SHARED } from 'libs/shared/meta';
+import { NOTE_ARCHIVED, NOTE_DELETED, NOTE_SHARED, NOTE_STARRED, NOTE_STATUS } from 'libs/shared/meta';
 import useNoteAPI from '../api/note';
 import noteCache from '../cache/note';
 import { NoteModel } from 'libs/shared/note';
@@ -29,8 +12,8 @@ const useNote = (initData?: NoteModel) => {
     const [note, setNote] = useState<NoteModel | undefined>(initData);
     const { find, abort: abortFindNote } = useNoteAPI();
     const { create, error: createError } = useNoteAPI();
-    const { mutate, loading, abort } = useNoteAPI();
-    const { addItem, removeItem, mutateItem, genNewId } =
+    const { mutate, loading, abort, updateStatus } = useNoteAPI();
+    const { addItem, removeItem, mutateItem, genNewId, initTree, loadArchivedTree, loadStarredTree } =
         NoteTreeState.useContainer();
     const toast = useToast();
 
@@ -185,22 +168,98 @@ const useNote = (initData?: NoteModel) => {
             const result = await mutate(note.id, updateData);
             await noteCache.mutateItem(note.id, updateData);
 
+            // If version history was created, refresh the appropriate tree
+            const resultWithVersion = result as (typeof result & { createdVersion?: any }) | null;
+            if (resultWithVersion?.createdVersion) {
+                // Refresh main tree (status=0) if note is NORMAL
+                if ((newNote.status ?? 0) === NOTE_STATUS.NORMAL) {
+                    await initTree();
+                }
+                // Refresh starred tree if note is STARRED
+                else if ((newNote.status ?? 0) === NOTE_STATUS.STARRED) {
+                    await loadStarredTree();
+                }
+                // Refresh archived tree if note is ARCHIVED
+                else if ((newNote.status ?? 0) === NOTE_STATUS.ARCHIVED) {
+                    await loadArchivedTree();
+                }
+            }
+
             return result;
         },
-        [abort, toast, note, mutate, mutateItem]
+        [abort, toast, note, mutate, mutateItem, initTree, loadArchivedTree, loadStarredTree]
     );
 
     const initNote = useCallback((note: Partial<NoteModel>) => {
         setNote({
             deleted: NOTE_DELETED.NORMAL,
             shared: NOTE_SHARED.PRIVATE,
-            pinned: NOTE_PINNED.UNPINNED,
+            archived: NOTE_ARCHIVED.UNARCHIVED,
+            starred: NOTE_STARRED.UNSTARRED,
+            status: NOTE_STATUS.NORMAL,
             editorsize: null,
             id: '-1',
             title: '',
             ...note,
         });
     }, []);
+
+    // Phase 8: Batch status update via /api/notes/status
+    const updateNotesStatus = useCallback(
+        async (ids: string[], status: NOTE_STATUS, pid?: string) => {
+            const result = await updateStatus(ids, status, pid);
+
+            if (!result) {
+                throw new Error('Failed to update notes status');
+            }
+
+            // Update local cache for each affected note (skip if not in cache)
+            for (const id of result.ids) {
+                try {
+                    await noteCache.mutateItem(id, { status });
+                } catch {
+                    // Note may not be in cache (e.g. archived/starred notes)
+                }
+            }
+
+            return result;
+        },
+        [updateStatus]
+    );
+
+    const archiveNote = useCallback(
+        async (id: string) => {
+            await updateNotesStatus([id], NOTE_STATUS.ARCHIVED);
+            await removeItem(id);
+            await Promise.all([initTree(), loadArchivedTree()]);
+        },
+        [updateNotesStatus, removeItem, initTree, loadArchivedTree]
+    );
+
+    const unarchiveNote = useCallback(
+        async (id: string) => {
+            await updateNotesStatus([id], NOTE_STATUS.NORMAL);
+            await Promise.all([initTree(), loadArchivedTree()]);
+        },
+        [updateNotesStatus, initTree, loadArchivedTree]
+    );
+
+    const starNote = useCallback(
+        async (id: string) => {
+            await updateNotesStatus([id], NOTE_STATUS.STARRED);
+            await removeItem(id);
+            await Promise.all([initTree(), loadStarredTree()]);
+        },
+        [updateNotesStatus, removeItem, initTree, loadStarredTree]
+    );
+
+    const unstarNote = useCallback(
+        async (id: string) => {
+            await updateNotesStatus([id], NOTE_STATUS.NORMAL);
+            await Promise.all([initTree(), loadStarredTree()]);
+        },
+        [updateNotesStatus, initTree, loadStarredTree]
+    );
 
     const findOrCreateNote = useCallback(
         async (id: string, note: Partial<NoteModel>) => {
@@ -230,6 +289,11 @@ const useNote = (initData?: NoteModel) => {
         removeNote,
         mutateNote,
         initNote,
+        archiveNote,
+        unarchiveNote,
+        starNote,
+        unstarNote,
+        updateNotesStatus,
         loading,
     };
 };
