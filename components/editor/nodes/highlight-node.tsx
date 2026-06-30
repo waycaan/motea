@@ -55,7 +55,7 @@ export class HighlightNode extends TextNode {
         dom: HTMLElement,
         config: EditorConfig,
     ): boolean {
-        const updated = super.updateDOM(prevNode, dom, config);
+        const updated = super.updateDOM(prevNode as this, dom, config);
         if (prevNode.__highlightColor !== this.__highlightColor) {
             dom.style.backgroundColor = this.__highlightColor;
         }
@@ -64,7 +64,7 @@ export class HighlightNode extends TextNode {
 
     static importDOM(): DOMConversionMap | null {
         return {
-            mark: (node: Node) => ({
+            mark: (_node: Node) => ({
                 conversion: convertHighlightElement,
                 priority: 1,
             }),
@@ -120,7 +120,7 @@ export class HighlightNode extends TextNode {
         if (type === 'highlight') {
             return true;
         }
-        return super.hasFormat(type);
+        return super.hasFormat(type as any);
     }
 }
 

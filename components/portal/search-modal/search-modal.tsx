@@ -28,24 +28,26 @@ const SearchModal: FC = () => {
 
     return (
         <FilterModal open={visible} onClose={close}>
-            <FilterModalInput
-                placeholder={t('Search note')}
-                doFilter={filterNotes}
-                keyword={keyword}
-                onClose={close}
-            />
-            <FilterModalList<NoteModel>
-                onEnter={onEnter}
-                items={list ?? []}
-                ItemComponent={(item, props) => (
-                    <SearchItem
-                        note={item}
-                        keyword={keyword}
-                        key={item.id}
-                        {...props}
-                    />
-                )}
-            />
+            <>
+                <FilterModalInput
+                    placeholder={t('Search note')}
+                    doFilter={filterNotes}
+                    keyword={keyword}
+                    onClose={close}
+                />
+                <FilterModalList<NoteModel>
+                    onEnter={onEnter}
+                    items={list ?? []}
+                    ItemComponent={(item, props) => (
+                        <SearchItem
+                            note={item}
+                            keyword={keyword}
+                            key={item.id}
+                            {...props}
+                        />
+                    )}
+                />
+            </>
         </FilterModal>
     );
 };

@@ -13,6 +13,7 @@ import { NOTE_SHARED } from 'libs/shared/meta';
 import useI18n from 'libs/web/hooks/use-i18n';
 import NavButtonGroup from './nav-button-group';
 import SaveButton from './save-button';
+import VersionToggle from './version-toggle';
 import UpdatedAtDisplay from './updated-at-display';
 import { EyeIcon } from '@heroicons/react/outline';
 
@@ -168,6 +169,7 @@ const NoteNav = () => {
                 >
                     <CircularProgress size="14px" color="inherit" />
                 </div>
+                <VersionToggle className="mr-2" />
                 <SaveButton className="mr-2" />
 
                 {/* Share按钮 - 在窄屏时隐藏 */}

@@ -3,19 +3,18 @@ import { PageMode } from 'libs/shared/page';
 import { TreeModel } from 'libs/shared/tree';
 import NoteState from 'libs/web/state/note';
 import NoteTreeState from 'libs/web/state/tree';
-import { FC, useMemo } from 'react';
+import { FC, useMemo, ReactNode } from 'react';
 import Error from 'next/error';
 import useI18n from 'libs/web/hooks/use-i18n';
 import { NextSeo } from 'next-seo';
 import { removeMarkdown } from 'libs/web/utils/markdown';
-import { ReactNodeLike } from 'prop-types';
 
 const LayoutPublic: FC<{
     tree?: TreeModel;
     note?: NoteModel;
     pageMode: PageMode;
     baseURL: string;
-    children: ReactNodeLike;
+    children: ReactNode;
 }> = ({ children, note, tree, pageMode, baseURL }) => {
     const { t } = useI18n();
 

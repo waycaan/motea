@@ -20,6 +20,7 @@ import {
     PuzzleIcon,
     ChevronDoubleUpIcon,
     RefreshIcon,
+    XIcon,
 } from '@heroicons/react/outline';
 
 export const ICONS = {
@@ -42,6 +43,7 @@ export const ICONS = {
     Puzzle: PuzzleIcon,
     ChevronDoubleUp: ChevronDoubleUpIcon,
     Refresh: RefreshIcon,
+    XIcon: XIcon,
     WidthSize: (props: any) => <SelectorIcon style={{ transform: 'rotate(90deg)' }} {...props}/>
 };
 

@@ -1,18 +1,6 @@
 /**
  * Image Node for Lexical
- *
- * Copyright (c) 2025 waycaan
- * Licensed under the MIT License
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * Supports Markdown syntax ![alt](url) and direct image insertion
  */
 
 import {
@@ -27,7 +15,9 @@ import {
     SerializedLexicalNode,
     Spread,
 } from 'lexical';
-import { Suspense } from 'react';
+import { Suspense, useCallback } from 'react';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { $getNodeByKey } from 'lexical';
 
 export interface ImagePayload {
     altText: string;
@@ -55,25 +45,51 @@ function ImageComponent({
     width,
     height,
     maxWidth,
+    nodeKey,
 }: {
     altText: string;
     height?: number;
     maxWidth?: number;
+    nodeKey: string;
     src: string;
     width?: number;
 }) {
+    const [editor] = useLexicalComposerContext();
+
+    const handleSrcChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const newSrc = e.target.value;
+            editor.update(() => {
+                const node = $getNodeByKey(nodeKey);
+                if (node && 'setSrc' in node) {
+                    (node as any).setSrc(newSrc);
+                }
+            });
+        },
+        [editor, nodeKey]
+    );
+
     return (
-        <img
-            src={src}
-            alt={altText}
-            style={{
-                height,
-                maxWidth: maxWidth || '100%',
-                width,
-            }}
-            className="max-w-full h-auto rounded-lg my-4"
-            draggable="false"
-        />
+        <div className="my-4">
+            <input
+                type="text"
+                value={src}
+                onChange={handleSrcChange}
+                className="w-full text-xs text-gray-400 bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-400 focus:outline-none rounded px-1 py-0.5 mb-1 truncate"
+                title="点击修改图片链接"
+            />
+            <img
+                src={src}
+                alt={altText}
+                style={{
+                    height,
+                    maxWidth: maxWidth || '100%',
+                    width,
+                }}
+                className="max-w-full h-auto rounded-lg"
+                draggable="false"
+            />
+        </div>
     );
 }
 
@@ -155,7 +171,7 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
 
     static importDOM(): DOMConversionMap | null {
         return {
-            img: (node: Node) => ({
+            img: (_node: Node) => ({
                 conversion: convertImageElement,
                 priority: 0,
             }),
@@ -189,6 +205,11 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
         writable.__altText = altText;
     }
 
+    setSrc(src: string): void {
+        const writable = this.getWritable();
+        writable.__src = src;
+    }
+
     setWidthAndHeight(width: number, height: number): void {
         const writable = this.getWritable();
         writable.__width = width;
@@ -204,6 +225,7 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
                     width={this.__width}
                     height={this.__height}
                     maxWidth={this.__maxWidth}
+                    nodeKey={this.__key}
                 />
             </Suspense>
         );

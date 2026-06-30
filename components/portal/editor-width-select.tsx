@@ -13,7 +13,7 @@ interface EditorWidthSelectItem {
 const EditorWidthSelect: FC = () => {
     const { t } = useI18n();
     const {
-        editorWidthSelect: { close, anchor, data, visible },
+        editorWidthSelect: { close, anchor, data: _data, visible },
     } = PortalState.useContainer();
     const {
         settings: { settings, updateSettings },

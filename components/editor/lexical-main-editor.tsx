@@ -68,7 +68,7 @@ const LexicalMainEditor: FC<
                 isPreview={isPreview}
                 className="px-4 md:px-0"
                 noteId={editorNote?.id}
-                {...props}
+                {...(props as any)}
             />
             {!isPreview && <Backlinks />}
         </article>

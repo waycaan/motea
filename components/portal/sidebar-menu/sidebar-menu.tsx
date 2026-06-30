@@ -2,12 +2,14 @@ import { Menu } from '@material-ui/core';
 import { FC, useMemo } from 'react';
 import {
     ClipboardCopyIcon,
-    StarIcon,
     TrashIcon,
+    ArchiveIcon,
+    StarIcon,
+    DocumentDownloadIcon,
 } from '@heroicons/react/outline';
 import PortalState from 'libs/web/state/portal';
 import useI18n from 'libs/web/hooks/use-i18n';
-import { NOTE_PINNED } from 'libs/shared/meta';
+import { NOTE_STATUS } from 'libs/shared/meta';
 import { NoteModel } from 'libs/shared/note';
 import { Item, SidebarMenuItem, MENU_HANDLER_NAME } from './sidebar-menu-item';
 
@@ -30,27 +32,42 @@ const SidebarMenu: FC = () => {
                 handler: MENU_HANDLER_NAME.COPY_LINK,
             },
             {
-                text: t('Add to Favorites'),
-                icon: <StarIcon />,
-                handler: MENU_HANDLER_NAME.ADD_TO_FAVORITES,
+                text: t('Add to Archive'),
+                icon: <ArchiveIcon />,
+                handler: MENU_HANDLER_NAME.ADD_TO_ARCHIVE,
                 enable(item?: NoteModel) {
-                    return item?.pinned !== NOTE_PINNED.PINNED;
+                    return (item as any)?.status === NOTE_STATUS.NORMAL;
                 },
             },
             {
-                text: t('Remove from Favorites'),
-                icon: <StarIcon />,
-                handler: MENU_HANDLER_NAME.REMOVE_FROM_FAVORITES,
+                text: t('Remove from Archive'),
+                icon: <ArchiveIcon />,
+                handler: MENU_HANDLER_NAME.REMOVE_FROM_ARCHIVE,
                 enable(item?: NoteModel) {
-                    return item?.pinned === NOTE_PINNED.PINNED;
+                    return (item as any)?.status === NOTE_STATUS.ARCHIVED;
                 },
             },
-            // Replaced by dedicated window
-            /*{
-                text: t('Toggle width'),
-                icon: <SelectorIcon style={{ transform: 'rotate(90deg)' }} />,
-                handler: MENU_HANDLER_NAME.SWITCH_EDITOR_WIDTH,
-            },*/
+            {
+                text: t('Add to Star'),
+                icon: <StarIcon />,
+                handler: MENU_HANDLER_NAME.ADD_TO_STAR,
+                enable(item?: NoteModel) {
+                    return (item as any)?.status === NOTE_STATUS.NORMAL;
+                },
+            },
+            {
+                text: t('Remove from Star'),
+                icon: <StarIcon />,
+                handler: MENU_HANDLER_NAME.REMOVE_FROM_STAR,
+                enable(item?: NoteModel) {
+                    return (item as any)?.status === NOTE_STATUS.STARRED;
+                },
+            },
+            {
+                text: t('Export as MD'),
+                icon: <DocumentDownloadIcon />,
+                handler: MENU_HANDLER_NAME.EXPORT_MD,
+            },
         ],
         [t]
     );

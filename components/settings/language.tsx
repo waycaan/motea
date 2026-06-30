@@ -2,7 +2,6 @@ import { FC, useCallback, ChangeEvent } from 'react';
 import { MenuItem, TextField } from '@material-ui/core';
 import UIState from 'libs/web/state/ui';
 import { defaultFieldConfig } from './settings-container';
-import router from 'next/router';
 import useI18n from 'libs/web/hooks/use-i18n';
 import { configLocale, Locale } from 'locales';
 import { map } from 'lodash';
@@ -16,7 +15,7 @@ export const Language: FC = () => {
     const handleChange = useCallback(
         async (event: ChangeEvent<HTMLInputElement>) => {
             await updateSettings({ locale: event.target.value as Locale });
-            router.reload();
+            window.location.reload();
         },
         [updateSettings]
     );

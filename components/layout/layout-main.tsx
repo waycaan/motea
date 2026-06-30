@@ -16,10 +16,9 @@ import SidebarMenu from 'components/portal/sidebar-menu/sidebar-menu';
 import { NoteModel } from 'libs/shared/note';
 import PreviewModal from 'components/portal/preview-modal';
 import LinkToolbar from 'components/portal/link-toolbar/link-toolbar';
-import { ReactNodeLike } from 'prop-types';
 import EditorWidthSelect from 'components/portal/editor-width-select';
 
-const MainWrapper: FC<{ children: ReactNodeLike }> = ({ children }) => {
+const MainWrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
     const {
         sidebar: { isFold },
     } = UIState.useContainer();
@@ -44,7 +43,7 @@ const MainWrapper: FC<{ children: ReactNodeLike }> = ({ children }) => {
     );
 };
 
-const MobileMainWrapper: FC<{ children: ReactNodeLike }> = ({ children }) => {
+const MobileMainWrapper: FC<{ children: React.ReactNode }> = ({ children }) => {
     const {
         sidebar: { isFold, open, close },
     } = UIState.useContainer();
@@ -77,7 +76,7 @@ const MobileMainWrapper: FC<{ children: ReactNodeLike }> = ({ children }) => {
 };
 
 // 提取状态提供者组合
-const StateProviders: FC<{ tree?: TreeModel; note?: NoteModel; children: ReactNodeLike }> = ({
+const StateProviders: FC<{ tree?: TreeModel; note?: NoteModel; children: React.ReactNode }> = ({
     tree,
     note,
     children
@@ -107,7 +106,7 @@ const ModalGroup: FC = () => (
 );
 
 // 提取主布局选择逻辑
-const MainLayoutSelector: FC<{ children: ReactNodeLike }> = ({ children }) => {
+const MainLayoutSelector: FC<{ children: React.ReactNode }> = ({ children }) => {
     const { ua } = UIState.useContainer();
 
     if (ua?.isMobileOnly) {
@@ -120,7 +119,7 @@ const MainLayoutSelector: FC<{ children: ReactNodeLike }> = ({ children }) => {
 const LayoutMain: FC<{
     tree?: TreeModel;
     note?: NoteModel;
-    children: ReactNodeLike;
+    children: React.ReactNode;
 }> = ({ children, tree, note }) => {
     useEffect(() => {
         document.body.classList.add('overscroll-none');
@@ -128,8 +127,10 @@ const LayoutMain: FC<{
 
     return (
         <StateProviders tree={tree} note={note}>
-            <MainLayoutSelector>{children}</MainLayoutSelector>
-            <ModalGroup />
+            <>
+                <MainLayoutSelector>{children}</MainLayoutSelector>
+                <ModalGroup />
+            </>
         </StateProviders>
     );
 };

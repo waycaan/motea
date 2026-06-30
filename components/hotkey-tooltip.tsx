@@ -1,8 +1,7 @@
 import { Tooltip, TooltipProps } from '@material-ui/core';
 import UIState from 'libs/web/state/ui';
 import { noop } from 'lodash';
-import { FC, useEffect } from 'react';
-import type { ReactNodeLike } from 'prop-types';
+import { FC, useEffect, ReactNode } from 'react';
 
 const Title: FC<{
     text: string;
@@ -18,7 +17,7 @@ const Title: FC<{
 const HotkeyTooltip: FC<{
     text: string;
     keys?: string[];
-    children: ReactNodeLike;
+    children: ReactNode;
     /**
      * first key
      */

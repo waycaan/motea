@@ -35,24 +35,26 @@ const TrashModal: FC = () => {
 
     return (
         <FilterModal open={visible} onClose={close}>
-            <FilterModalInput
-                placeholder={t('Search note in trash')}
-                doFilter={filterNotes}
-                keyword={keyword}
-                onClose={close}
-            />
-            <FilterModalList<NoteModel>
-                onEnter={onEnter}
-                items={list ?? []}
-                ItemComponent={(item, props) => (
-                    <TrashItem
-                        note={item}
-                        keyword={keyword}
-                        key={item.id}
-                        {...props}
-                    />
-                )}
-            />
+            <>
+                <FilterModalInput
+                    placeholder={t('Search note in trash')}
+                    doFilter={filterNotes}
+                    keyword={keyword}
+                    onClose={close}
+                />
+                <FilterModalList<NoteModel>
+                    onEnter={onEnter}
+                    items={list ?? []}
+                    ItemComponent={(item, props) => (
+                        <TrashItem
+                            note={item}
+                            keyword={keyword}
+                            key={item.id}
+                            {...props}
+                        />
+                    )}
+                />
+            </>
         </FilterModal>
     );
 };

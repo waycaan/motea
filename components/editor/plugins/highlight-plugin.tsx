@@ -23,7 +23,7 @@ export default function HighlightPlugin(): null {
     useEffect(() => {
         const removeToggleHighlightCommand = editor.registerCommand(
             TOGGLE_HIGHLIGHT_COMMAND,
-            (color = '#ffeb3b') => {
+            (_color = '#ffeb3b') => {
                 const selection = $getSelection();
                 if ($isRangeSelection(selection)) {
                     // 使用Lexical内置的highlight格式，这样就能与HIGHLIGHT转换器兼容

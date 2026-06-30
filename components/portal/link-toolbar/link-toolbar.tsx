@@ -21,7 +21,7 @@ const LinkToolbar = () => {
 
     const createEmbed = useCallback(
         (type: 'bookmark' | 'embed') => {
-            const { view, href } = data ?? {};
+            const { view, href } = (data as any) ?? {};
             if (!view || !href) {
                 return;
             }

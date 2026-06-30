@@ -34,7 +34,7 @@ export function $isSelectionInCodeBlock(): boolean {
 
     // 检查第一个节点是否在代码块中
     const firstNode = nodes[0];
-    let currentNode = firstNode;
+    let currentNode: any = firstNode;
 
     // 向上遍历找到父节点
     while (currentNode) {

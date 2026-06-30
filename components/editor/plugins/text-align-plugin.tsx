@@ -12,11 +12,10 @@ import {
     createCommand,
     LexicalCommand,
     ElementFormatType,
+    $isParagraphNode,
 } from 'lexical';
-import { $isAtNodeEnd } from '@lexical/selection';
-import { $createParagraphNode, $isParagraphNode } from 'lexical';
 import { $isHeadingNode } from '@lexical/rich-text';
-import { $isListNode, $isListItemNode } from '@lexical/list';
+import { $isListItemNode } from '@lexical/list';
 
 export type TextAlignType = 'left' | 'center' | 'right' | 'justify';
 
@@ -55,7 +54,7 @@ export function $getTextAlign(): TextAlignType | null {
 
     // 检查第一个节点的对齐方式
     const firstNode = nodes[0];
-    let targetNode = firstNode;
+    let targetNode: any = firstNode;
 
     // 如果是文本节点，获取其父节点
     if (targetNode.getType() === 'text') {
@@ -89,7 +88,7 @@ export function $setTextAlign(align: TextAlignType): void {
     const nodesToFormat = new Set();
 
     for (const node of nodes) {
-        let targetNode = node;
+        let targetNode: any = node;
 
         // 如果是文本节点，获取其父节点
         if (targetNode.getType() === 'text') {
@@ -104,8 +103,9 @@ export function $setTextAlign(align: TextAlignType): void {
 
     // 应用格式
     for (const node of nodesToFormat) {
-        if ($isListItemNode(node) || $isParagraphNode(node) || $isHeadingNode(node)) {
-            node.setFormat(formatType);
+        const targetNode = node as any;
+        if ($isListItemNode(targetNode) || $isParagraphNode(targetNode) || $isHeadingNode(targetNode)) {
+            targetNode.setFormat(formatType);
         }
     }
 }

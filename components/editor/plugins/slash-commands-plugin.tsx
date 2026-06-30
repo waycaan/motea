@@ -21,7 +21,6 @@ import { INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontal
 import { INSERT_CODE_BLOCK_COMMAND } from './code-block-plugin';
 import { FORMAT_TEXT_ALIGN_COMMAND } from './text-align-plugin';
 import { INSERT_CUSTOM_TABLE_COMMAND } from './table-plugin';
-import { INSERT_COLLAPSIBLE_COMMAND } from './collapsible-plugin';
 import { useCallback, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from 'next-themes';
@@ -35,7 +34,6 @@ import {
     AnnotationIcon,
     MinusIcon,
     CodeIcon,
-    ChevronDownIcon
 } from '@heroicons/react/outline';
 
 // 对齐图标组件
@@ -202,13 +200,6 @@ export default function SlashCommandsPlugin(): JSX.Element {
                 keywords: ['table', 'grid', 'rows', 'columns'],
                 onSelect: () => {
                     setIsTableDialogOpen(true);
-                },
-            }),
-            new SlashCommandOption('Collapsible Container', {
-                icon: <ChevronDownIcon className="w-4 h-4" />,
-                keywords: ['collapsible', 'collapse', 'expandable', 'details', 'accordion'],
-                onSelect: () => {
-                    editor.dispatchCommand(INSERT_COLLAPSIBLE_COMMAND, undefined);
                 },
             }),
         ];

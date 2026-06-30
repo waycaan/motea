@@ -1,18 +1,6 @@
 /**
  * Lazy Plugin Loader
- *
- * Copyright (c) 2025 waycaan
- * Licensed under the MIT License
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * Dynamically loads plugins only when needed to improve initial performance
  */
 
 import { lazy, Suspense, useState, useEffect } from 'react';
@@ -25,11 +13,13 @@ const TextAlignPlugin = lazy(() => import('./text-align-plugin'));
 interface LazyPluginLoaderProps {
     enableTable?: boolean;
     enableTextAlign?: boolean;
+    forceLoad?: boolean; // 强制立即加载，用于导入等场景
 }
 
 export default function LazyPluginLoader({
     enableTable = false,
-    enableTextAlign = false
+    enableTextAlign = false,
+    forceLoad = false
 }: LazyPluginLoaderProps) {
     const [editor] = useLexicalComposerContext();
     const [shouldLoadTable, setShouldLoadTable] = useState(false);
@@ -47,6 +37,12 @@ export default function LazyPluginLoader({
                 setShouldLoadTextAlign(true);
             }
         };
+
+        // 如果forceLoad为true，立即加载
+        if (forceLoad) {
+            handleUserInteraction();
+            return;
+        }
 
         // Load on first focus or after a short delay
         const timeoutId = setTimeout(() => {

@@ -40,7 +40,7 @@ const useStyles = makeStyles({
         minWidth: '80px',
         fontWeight: 'bold',
         textTransform: 'none',
-        borderRadius: '8px',
+        borderRadius: '20px',
         boxShadow: 'none !important',
         '&:hover': {
             opacity: 0.8,
@@ -97,20 +97,29 @@ const SaveButton: FC<SaveButtonProps> = ({ className }) => {
     const syncedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-
+    // 创建内容观察器 - 用于检测IndexedDB内容变化
     const localContentComparator = useMemo(() => createContentComparator(), []);
+    const localTitleComparator = useMemo(() => createContentComparator(), []);
 
     useEffect(() => {
         if (!note?.id) return;
 
         let isEditing = false;
+        let baselineReady = false;
 
         const checkIndexedDBChanges = async () => {
             try {
                 const localNote = await noteCache.getItem(note.id);
                 if (localNote) {
-                    if (localContentComparator.hasChanged(localNote.content)) {
-                        console.log('🔍 SaveButton: IndexedDB content changed, setting status to save');
+                    if (!baselineReady) {
+                        localContentComparator.updateBaseline(localNote.content || '');
+                        localTitleComparator.updateBaseline(localNote.title || '');
+                        baselineReady = true;
+                        return;
+                    }
+                    const contentChanged = localContentComparator.hasChanged(localNote.content || '');
+                    const titleChanged = localTitleComparator.hasChanged(localNote.title || '');
+                    if (contentChanged || titleChanged) {
                         if (!isEditing) {
                             isEditing = true;
                             setSyncStatus('save');
@@ -123,28 +132,14 @@ const SaveButton: FC<SaveButtonProps> = ({ className }) => {
                     }
                 }
             } catch (error) {
-                console.error('SaveButton check error:', error);
+                console.error('SaveButton检查错误:', error);
             }
         };
 
-        const initializeComparator = async () => {
-            try {
-                const localNote = await noteCache.getItem(note.id);
-                if (localNote) {
-                    localContentComparator.updateBaseline(localNote.content);
-                    setSyncStatus('view');
-                    isEditing = false;
-                } else {
-                    setSyncStatus('view');
-                    isEditing = false;
-                }
-            } catch (error) {
-                setSyncStatus('view');
-                isEditing = false;
-            }
-        };
+        setSyncStatus('view');
+        isEditing = false;
+        baselineReady = false;
 
-        initializeComparator();
         const timerId = `save-button-check-${note.id}`;
         setManagedInterval(timerId, checkIndexedDBChanges, 1000);
 
@@ -152,6 +147,7 @@ const SaveButton: FC<SaveButtonProps> = ({ className }) => {
             clearManagedTimer(timerId);
             clearManagedTimer(`save-button-sync-timeout-${note?.id || 'unknown'}`);
             clearManagedTimer(`save-button-synced-timeout-${note?.id || 'unknown'}`);
+
             if (syncedTimeoutRef.current) {
                 clearTimeout(syncedTimeoutRef.current);
             }
@@ -164,14 +160,14 @@ const SaveButton: FC<SaveButtonProps> = ({ className }) => {
     const handleSave = useCallback(async () => {
         setSyncStatus('syncing');
 
-
+        // 清理之前的定时器
         const syncTimeoutId = `save-button-sync-timeout-${note?.id || 'unknown'}`;
         const syncedTimeoutId = `save-button-synced-timeout-${note?.id || 'unknown'}`;
 
         clearManagedTimer(syncTimeoutId);
         clearManagedTimer(syncedTimeoutId);
 
-
+        // 兼容性：清理旧的ref定时器
         if (syncedTimeoutRef.current) {
             clearTimeout(syncedTimeoutRef.current);
         }
@@ -179,7 +175,7 @@ const SaveButton: FC<SaveButtonProps> = ({ className }) => {
             clearTimeout(syncTimeoutRef.current);
         }
 
-
+        // 设置30秒超时
         setManagedTimeout(syncTimeoutId, () => {
             setSyncStatus('fail');
             setManagedTimeout(`${syncTimeoutId}-reset`, () => {
@@ -203,15 +199,25 @@ const SaveButton: FC<SaveButtonProps> = ({ className }) => {
             }
 
             setSyncStatus('synced');
+            window.dispatchEvent(new Event('note-saved'));
 
+            const savedNote = await noteCache.getItem(note?.id || '');
+            if (savedNote) {
+                localContentComparator.updateBaseline(savedNote.content || '');
+                localTitleComparator.updateBaseline(savedNote.title || '');
+            }
 
+            // 2秒后重置为view状态
             setManagedTimeout(syncedTimeoutId, () => {
                 setSyncStatus('view');
             }, 2000);
 
         } catch (error) {
+            // 清理超时定时器
             const syncTimeoutId = `save-button-sync-timeout-${note?.id || 'unknown'}`;
             clearManagedTimer(syncTimeoutId);
+
+            // 兼容性：清理旧的ref定时器
             if (syncTimeoutRef.current) {
                 clearTimeout(syncTimeoutRef.current);
                 syncTimeoutRef.current = null;
@@ -219,7 +225,7 @@ const SaveButton: FC<SaveButtonProps> = ({ className }) => {
 
             setSyncStatus('fail');
 
-
+            // 2秒后重置为view状态
             setManagedTimeout(`save-button-fail-reset-${note?.id || 'unknown'}`, () => {
                 setSyncStatus('view');
             }, 2000);

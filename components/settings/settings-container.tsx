@@ -5,11 +5,9 @@ import { Language } from './language';
 import { Theme } from './theme';
 import { EditorWidth } from './editor-width';
 import { ImportOrExport } from './import-or-export';
-import { SnippetInjection } from './snippet-injection';
+import { Advanced } from './advanced';
 import useI18n from 'libs/web/hooks/use-i18n';
 import { SettingsHeader } from './settings-header';
-import { Debugging } from 'components/settings/debugging';
-import { DebugInformation } from 'libs/shared/debugging';
 
 export const defaultFieldConfig: TextFieldProps = {
     fullWidth: true,
@@ -25,12 +23,10 @@ export const defaultFieldConfig: TextFieldProps = {
 };
 
 const HR = () => {
-    return <hr className="my-10 border-gray-200" />;
+    return <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '2px solid #c4c4c4' }} />;
 };
 
-export const SettingsContainer: FC<{
-    debugInfo: DebugInformation
-}> = (props) => {
+export const SettingsContainer: FC = () => {
     const { t } = useI18n();
 
     return (
@@ -45,25 +41,16 @@ export const SettingsContainer: FC<{
             <SettingsHeader
                 id="import-and-export"
                 title={t('Import & Export')}
-                description={t(
-                    'Import a zip file containing markdown files to this location, or export all pages from this location.'
-                )}
             ></SettingsHeader>
             <ImportOrExport></ImportOrExport>
 
             <HR />
-            <SettingsHeader id="sharing" title={t('Sharing')}></SettingsHeader>
-            <SnippetInjection></SnippetInjection>
-
-            <HR />
             <SettingsHeader
-                id="debug"
-                title={t('Debugging')}
-                description={t(
-                    'Provides information about your Notea instance that can be helpful when trying to fix problems.'
-                )}
-            />
-            <Debugging debugInfo={props.debugInfo} />
+                id="advanced"
+                title={t('Advanced')}
+                description={t('Configure backend behavior parameters')}
+            ></SettingsHeader>
+            <Advanced></Advanced>
         </section>
     );
 };

@@ -66,7 +66,6 @@ export default function TableConfigDialog({ isOpen, onClose, onConfirm }: TableC
                                 backgroundColor: theme === 'dark' ? '#27272a' : '#f4f4f5',
                                 borderColor: theme === 'dark' ? '#52525b' : '#d4d4d8',
                                 color: theme === 'dark' ? 'white' : 'black',
-                                focusRingColor: theme === 'dark' ? '#3185eb' : '#eab834',
                             }}
                         />
                     </div>
@@ -86,7 +85,6 @@ export default function TableConfigDialog({ isOpen, onClose, onConfirm }: TableC
                                 backgroundColor: theme === 'dark' ? '#27272a' : '#f4f4f5',
                                 borderColor: theme === 'dark' ? '#52525b' : '#d4d4d8',
                                 color: theme === 'dark' ? 'white' : 'black',
-                                focusRingColor: theme === 'dark' ? '#3185eb' : '#eab834',
                             }}
                         />
                     </div>

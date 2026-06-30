@@ -4,17 +4,21 @@ import {
     ChevronDoubleLeftIcon,
     InboxIcon,
     CogIcon,
+    LockOpenIcon,
+    LockClosedIcon,
+    LogoutIcon,
 } from '@heroicons/react/outline';
+import { ViewListIcon, ArchiveIcon, StarIcon } from '@heroicons/react/solid';
 import { forwardRef, HTMLProps, useCallback } from 'react';
 import UIState from 'libs/web/state/ui';
+import NoteState from 'libs/web/state/note';
 import classNames from 'classnames';
 import HotkeyTooltip from 'components/hotkey-tooltip';
 import Link from 'next/link';
 import dayjs from 'dayjs';
 import PortalState from 'libs/web/state/portal';
 import useI18n from 'libs/web/hooks/use-i18n';
-import HeadwayWidget from '@notea/headway-widget';
-import useMounted from 'libs/web/hooks/use-mounted';
+
 import { useRouter } from 'next/router';
 import NoteTreeState from 'libs/web/state/tree';
 
@@ -104,14 +108,33 @@ const ButtonTrash = () => {
 const ButtonDailyNotes = () => {
     const { t } = useI18n();
     const { genNewId } = NoteTreeState.useContainer();
+    const { createNote } = NoteState.useContainer();
     const today = dayjs().format('YYYY-MM-DD');
     const router = useRouter();
 
-    const handleDailyNoteClick = useCallback(() => {
+    const handleDailyNoteClick = useCallback(async () => {
         const newId = genNewId();
-        const href = `/${newId}?new=true&daily=${today}`;
-        router.push(href, href, { shallow: true });
-    }, [genNewId, today, router]);
+        const content = JSON.stringify({
+            root: {
+                children: [
+                    {
+                        children: [
+                            { children: [{ detail: 0, format: 0, mode: 'normal', style: '', text: '', type: 'text', version: 1 }], direction: null, format: '', indent: 0, type: 'listitem', version: 1, value: 1, listType: 'check', checked: false },
+                            { children: [{ detail: 0, format: 0, mode: 'normal', style: '', text: '', type: 'text', version: 1 }], direction: null, format: '', indent: 0, type: 'listitem', version: 1, value: 2, listType: 'check', checked: false },
+                            { children: [{ detail: 0, format: 0, mode: 'normal', style: '', text: '', type: 'text', version: 1 }], direction: null, format: '', indent: 0, type: 'listitem', version: 1, value: 3, listType: 'check', checked: false },
+                            { children: [{ detail: 0, format: 0, mode: 'normal', style: '', text: '', type: 'text', version: 1 }], direction: null, format: '', indent: 0, type: 'listitem', version: 1, value: 4, listType: 'check', checked: false },
+                        ],
+                        direction: null, format: '', indent: 0, type: 'list', version: 1, listType: 'check',
+                    },
+                ],
+                direction: null, format: '', indent: 0, type: 'root', version: 1,
+            },
+        });
+        const result = await createNote({ id: newId, title: today, content });
+        if (result?.id) {
+            router.push(`/${result.id}`, undefined, { shallow: true });
+        }
+    }, [genNewId, today, createNote, router]);
 
     return (
         <HotkeyTooltip
@@ -143,28 +166,134 @@ const ButtonSettings = () => {
     );
 };
 
-const SidebarTool = () => {
-    const mounted = useMounted();
+const ButtonLock = () => {
+    const { t } = useI18n();
+    const { isEditMode, toggleEditMode } = UIState.useContainer();
 
+    return (
+        <HotkeyTooltip text={isEditMode ? t('Lock') : t('Unlock')}>
+            <ButtonItem onClick={toggleEditMode} aria-label="lock">
+                {isEditMode ? (
+                    <LockOpenIcon className="text-green-500" />
+                ) : (
+                    <LockClosedIcon />
+                )}
+            </ButtonItem>
+        </HotkeyTooltip>
+    );
+};
+
+const ButtonLogout = () => {
+    const { t } = useI18n();
+
+    const handleLogout = useCallback(async () => {
+        try {
+            // 调用服务端登出 API 清理 session
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch {
+            // 即使 API 失败也继续清理
+        }
+
+        // 清理 IndexedDB
+        if (typeof window !== 'undefined' && window.indexedDB) {
+            try {
+                const databases = await window.indexedDB.databases();
+                for (const db of databases) {
+                    if (db.name) {
+                        window.indexedDB.deleteDatabase(db.name);
+                    }
+                }
+            } catch {
+                // 忽略错误
+            }
+        }
+        // 清理 localStorage
+        localStorage.clear();
+        // 清理 sessionStorage
+        sessionStorage.clear();
+        // 跳转到登录页
+        window.location.href = '/login';
+    }, []);
+
+    return (
+        <HotkeyTooltip text={t('Logout')}>
+            <ButtonItem onClick={handleLogout} aria-label="logout">
+                <LogoutIcon className="text-red-500" />
+            </ButtonItem>
+        </HotkeyTooltip>
+    );
+};
+
+const ButtonOutline = ({ onClick, active }: { onClick: () => void; active: boolean }) => {
+    const { t } = useI18n();
+
+    return (
+        <HotkeyTooltip text={t('Outline')}>
+            <ButtonItem
+                onClick={onClick}
+                aria-label="outline"
+                className={active ? 'text-blue-600' : ''}
+            >
+                <ViewListIcon className="w-5 h-5" />
+            </ButtonItem>
+        </HotkeyTooltip>
+    );
+};
+
+const ButtonArchive = ({ onClick, active }: { onClick: () => void; active: boolean }) => {
+    const { t } = useI18n();
+
+    return (
+        <HotkeyTooltip text={t('Archive')}>
+            <ButtonItem
+                onClick={onClick}
+                aria-label="archive"
+                className={active ? 'text-blue-500' : ''}
+            >
+                <ArchiveIcon className="w-5 h-5" />
+            </ButtonItem>
+        </HotkeyTooltip>
+    );
+};
+
+const ButtonStar = ({ onClick, active }: { onClick: () => void; active: boolean }) => {
+    const { t } = useI18n();
+
+    return (
+        <HotkeyTooltip text={t('Starred')}>
+            <ButtonItem
+                onClick={onClick}
+                aria-label="starred"
+                className={active ? 'text-yellow-500' : ''}
+            >
+                <StarIcon className="w-5 h-5" />
+            </ButtonItem>
+        </HotkeyTooltip>
+    );
+};
+
+const SidebarTool = ({ onToggleOutline, outlineActive, onToggleArchive, archiveActive, onToggleStarred, starredActive }: {
+    onToggleOutline: () => void;
+    outlineActive: boolean;
+    onToggleArchive: () => void;
+    archiveActive: boolean;
+    onToggleStarred: () => void;
+    starredActive: boolean;
+}) => {
     return (
         <aside className="h-full flex flex-col w-12  md:w-11 flex-none bg-gray-200">
             <ButtonSearch />
-            <ButtonTrash />
+            <ButtonOutline onClick={onToggleOutline} active={outlineActive} />
+            <ButtonArchive onClick={onToggleArchive} active={archiveActive} />
+            <ButtonStar onClick={onToggleStarred} active={starredActive} />
             <ButtonDailyNotes />
+            <ButtonTrash />
 
             <div className="tool mt-auto">
-                {mounted ? (
-                    <HeadwayWidget account="J031Z7" badgePosition="center">
-                        <div className="mx-3 w-5 h-5"></div>
-                    </HeadwayWidget>
-                ) : null}
                 <ButtonMenu></ButtonMenu>
+                <ButtonLock />
                 <ButtonSettings></ButtonSettings>
-                <style jsx>{`
-                    .tool :global(.HW_softHidden) {
-                        display: none;
-                    }
-                `}</style>
+                <ButtonLogout />
             </div>
         </aside>
     );

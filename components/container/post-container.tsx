@@ -51,7 +51,7 @@ export const PostContainer: FC<{
                     <footer className="pb-10 text-gray-300 text-center my-20 text-sm">
                         Written with{' '}
                         <a
-                            href="https://github.com/notea-org/notea"
+                            href="https://github.com/waycaan/motea"
                             target="_blank"
                             rel="noreferrer"
                         >

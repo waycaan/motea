@@ -1,5 +1,6 @@
 import SidebarListItem from './sidebar-list-item';
 import NoteTreeState from 'libs/web/state/tree';
+import UIState from 'libs/web/state/ui';
 import Tree, {
     TreeDestinationPosition,
     TreeSourcePosition,
@@ -10,12 +11,13 @@ import HotkeyTooltip from 'components/hotkey-tooltip';
 import IconButton from 'components/icon-button';
 import useI18n from 'libs/web/hooks/use-i18n';
 import { CircularProgress, Tooltip } from '@material-ui/core';
-import { Favorites } from './favorites';
 
 const SideBarList = () => {
     const { t } = useI18n();
     const { tree, moveItem, mutateItem, initLoaded, collapseAllItems, genNewId } =
         NoteTreeState.useContainer();
+    const { isEditMode, selectedNoteIds } = UIState.useContainer();
+    const hasSelection = isEditMode && selectedNoteIds.size > 0;
 
     const onExpand = useCallback(
         (id: string | number) => {
@@ -72,9 +74,6 @@ const SideBarList = () => {
 
     return (
         <section className="h-full flex text-sm flex-col flex-grow bg-gray-100 overflow-y-auto">
-            {/* Favorites */}
-            <Favorites />
-
             {/* My Pages */}
             <div className="p-2 text-gray-500 flex items-center sticky top-0 bg-gray-100 z-10">
                 <div className="flex-auto flex items-center">
@@ -107,14 +106,14 @@ const SideBarList = () => {
                     ></IconButton>
                 </HotkeyTooltip>
             </div>
-            <div className="flex-grow pb-10">
+            <div className="flex-grow" style={{ paddingBottom: hasSelection ? '100px' : '40px' }}>
                 <Tree
                     onExpand={onExpand}
                     onCollapse={onCollapse}
                     onDragEnd={onDragEnd}
                     tree={tree}
-                    isDragEnabled
-                    isNestingEnabled
+                    isDragEnabled={!isEditMode}
+                    isNestingEnabled={!isEditMode}
                     offsetPerLevel={10}
                     renderItem={({
                         provided,

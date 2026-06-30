@@ -8,6 +8,17 @@
     position: relative;
 }
 
+/* Horizontal Rule (Divider) Styles */
+.editor-hr {
+    border: none;
+    border-top: 2px solid #c4c4c4;
+    margin: 1.5rem 0;
+}
+
+.dark .editor-hr {
+    border-top-color: #52525b;
+}
+
 .editor-container {
     position: relative;
 }
@@ -45,8 +56,8 @@
 
 /* Typography Styles */
 .editor-paragraph {
-    margin: 1rem 0;
-    line-height: 1.7;
+    margin: 0.2rem 0;
+    line-height: 1.6;
 }
 
 /* Lexical 0.32.1 官方缩进样式 */
@@ -191,7 +202,7 @@
 .editor-code {
     background-color: #f8f9fa;
     color: #212529;
-    border: 1px solid #e9ecef;
+    border: 1px solid #6b7280;
     border-radius: 0.5rem;
     padding: 1rem;
     margin: 1rem 0;
@@ -278,7 +289,7 @@
 /* CheckList 样式 */
 .editor-listitem-checked {
     text-decoration: line-through;
-    opacity: 0.7;
+    opacity: 0.6;
 }
 
 .editor-listitem-unchecked {
@@ -289,7 +300,52 @@
     list-style-type: none;
 }
 
-/* 废弃的Task List Styles已删除 */
+/* Checkbox base */
+.lexical-editor .editor-listitem-unchecked:before,
+.lexical-editor .editor-listitem-checked:before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 0.25em;
+    transform: translateY(-50%);
+    position: absolute;
+    border: 1.5px solid #9ca3af;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.lexical-editor .editor-listitem-unchecked:hover:before,
+.lexical-editor .editor-listitem-checked:hover:before {
+    border-color: #6b7280;
+}
+
+/* Checkbox checked state */
+.lexical-editor .editor-listitem-checked:before {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.lexical-editor .editor-listitem-checked:after {
+    content: '';
+    position: absolute;
+    left: 0.52em;
+    top: 50%;
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: translateY(-60%) rotate(45deg);
+    pointer-events: none;
+}
+
+.lexical-editor .editor-listitem-checked > *,
+.lexical-editor .editor-listitem-unchecked > * {
+    margin-left: 0;
+}
 
 /* Highlight Styles */
 mark {
@@ -331,6 +387,39 @@ mark {
     text-align: left;
     background-color: #f4f4f5;
     color: black;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    cursor: text;
+}
+
+.editor-table-cell-header {
+    border: 1px solid #d4d4d8;
+    min-height: 20px;
+    min-width: 50px;
+    padding: 8px 12px;
+    position: relative;
+    vertical-align: top;
+    text-align: left;
+    background-color: #e4e4e7;
+    font-weight: bold;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    cursor: text;
+}
+
+.editor-table td,
+.editor-table th {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.editor-table [contenteditable] {
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .editor-table-cell-header {
@@ -460,51 +549,26 @@ mark {
     margin-left: 200px;
 }
 
-.lexical-editor .editor-listitem-checked > *,
-.lexical-editor .editor-listitem-unchecked > * {
-    margin-left: 0;  /* 移除额外的左边距 */
-}
-
-.lexical-editor .editor-listitem-unchecked:before,
-.lexical-editor .editor-listitem-checked:before {
-    content: '';
-    width: 0.9em;
-    height: 0.9em;
-    top: 50%;
-    left: 0.3em;  /* 调整位置以匹配普通列表的bullet位置 */
-    transform: translateY(-50%);
-    position: absolute;
-    border: 1px solid #d1d5db;
-    border-radius: 0.125rem;
-    background: white;
-    cursor: pointer;
-}
-
-.lexical-editor .editor-listitem-checked:before {
-    background-color: #3b82f6;
-    border-color: #3b82f6;
-}
-
-.lexical-editor .editor-listitem-checked:after {
-    content: '✓';
-    position: absolute;
-    left: 0.425em;  /* 调整以匹配checkbox的新位置 */
-    top: 50%;
-    transform: translateY(-50%);
-    color: white;
-    font-size: 0.75rem;
-    font-weight: bold;
-    pointer-events: none;
-}
-
-.lexical-editor .editor-listitem-checked {
-    text-decoration: line-through;
-    opacity: 0.6;
-}
-
 /* Dark Theme Styles */
+.dark .editor-input {
+    color: #e5e7eb;
+}
+
 .dark .editor-placeholder {
     color: #6b7280;
+}
+
+.dark .editor-paragraph {
+    color: #e5e7eb;
+}
+
+.dark .editor-heading-h1,
+.dark .editor-heading-h2,
+.dark .editor-heading-h3,
+.dark .editor-heading-h4,
+.dark .editor-heading-h5,
+.dark .editor-heading-h6 {
+    color: #f3f4f6;
 }
 
 .dark .editor-quote {
@@ -512,37 +576,78 @@ mark {
     color: #9ca3af;
 }
 
+.dark .editor-link {
+    color: #60a5fa;
+}
+
+.dark .editor-link:hover {
+    color: #93bbfd;
+}
+
 .dark .editor-text-code {
     background-color: #3f3f46;
-    color: white;
+    color: #e5e7eb;
 }
 
 .dark .editor-code {
-    background-color: #2d3748 !important;
-    color: #e2e8f0 !important;
-    border-color: #4a5568 !important;
+    background-color: #1e1e2e !important;
+    color: #cdd6f4 !important;
+    border-color: #45475a !important;
 }
 
-.dark mark {
+.dark mark,
+.dark .lexical-highlight {
     background-color: #3185eb !important;
     color: white !important;
 }
 
-.dark .lexical-highlight {
-    background-color: #3185eb;
-    color: white;
+.dark .editor-table {
+    border-color: #52525b !important;
 }
 
 .dark .editor-table-cell {
     border-color: #52525b !important;
     background-color: #27272a !important;
-    color: white !important;
+    color: #e5e7eb !important;
 }
 
 .dark .editor-table-cell-header {
     border-color: #52525b !important;
     background-color: #3f3f46 !important;
-    color: white !important;
+    color: #f3f4f6 !important;
+}
+
+.dark .editor-list-ol,
+.dark .editor-list-ul {
+    color: #e5e7eb;
+}
+
+.dark .editor-listitem {
+    color: #e5e7eb;
+}
+
+.dark .editor-listitem-checked {
+    color: #9ca3af;
+}
+
+.dark .editor-listitem-unchecked {
+    color: #e5e7eb;
+}
+
+.dark .lexical-editor .editor-listitem-unchecked:before,
+.dark .lexical-editor .editor-listitem-checked:before {
+    border-color: #52525b;
+    background: #27272a;
+}
+
+.dark .lexical-editor .editor-listitem-unchecked:hover:before,
+.dark .lexical-editor .editor-listitem-checked:hover:before {
+    border-color: #6b7280;
+}
+
+.dark .lexical-editor .editor-listitem-checked:before {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
 }
 
 .dark .Collapsible__container {
@@ -551,12 +656,16 @@ mark {
 
 .dark .Collapsible__title {
     background-color: #3f3f46 !important;
-    color: white !important;
+    color: #f3f4f6 !important;
 }
 
 .dark .Collapsible__content {
     background-color: #27272a !important;
-    color: white !important;
+    color: #e5e7eb !important;
+}
+
+.dark .editor-image img {
+    opacity: 0.9;
 }
 
 /* Media Query for Dark Mode Preference */
@@ -568,5 +677,148 @@ mark {
     .editor-quote {
         border-left-color: #4b5563;
         color: #9ca3af;
+    }
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    /* Reduce indent on mobile - use smaller values */
+    .editor-paragraph[data-lexical-indent="1"],
+    .editor-heading-h1[data-lexical-indent="1"],
+    .editor-heading-h2[data-lexical-indent="1"],
+    .editor-heading-h3[data-lexical-indent="1"],
+    .editor-heading-h4[data-lexical-indent="1"],
+    .editor-heading-h5[data-lexical-indent="1"],
+    .editor-heading-h6[data-lexical-indent="1"] {
+        margin-left: 20px;
+    }
+
+    .editor-paragraph[data-lexical-indent="2"],
+    .editor-heading-h1[data-lexical-indent="2"],
+    .editor-heading-h2[data-lexical-indent="2"],
+    .editor-heading-h3[data-lexical-indent="2"],
+    .editor-heading-h4[data-lexical-indent="2"],
+    .editor-heading-h5[data-lexical-indent="2"],
+    .editor-heading-h6[data-lexical-indent="2"] {
+        margin-left: 40px;
+    }
+
+    .editor-paragraph[data-lexical-indent="3"],
+    .editor-heading-h1[data-lexical-indent="3"],
+    .editor-heading-h2[data-lexical-indent="3"],
+    .editor-heading-h3[data-lexical-indent="3"],
+    .editor-heading-h4[data-lexical-indent="3"],
+    .editor-heading-h5[data-lexical-indent="3"],
+    .editor-heading-h6[data-lexical-indent="3"] {
+        margin-left: 60px;
+    }
+
+    .editor-paragraph[data-lexical-indent="4"],
+    .editor-heading-h1[data-lexical-indent="4"],
+    .editor-heading-h2[data-lexical-indent="4"],
+    .editor-heading-h3[data-lexical-indent="4"],
+    .editor-heading-h4[data-lexical-indent="4"],
+    .editor-heading-h5[data-lexical-indent="4"],
+    .editor-heading-h6[data-lexical-indent="4"] {
+        margin-left: 80px;
+    }
+
+    .editor-paragraph[data-lexical-indent="5"],
+    .editor-heading-h1[data-lexical-indent="5"],
+    .editor-heading-h2[data-lexical-indent="5"],
+    .editor-heading-h3[data-lexical-indent="5"],
+    .editor-heading-h4[data-lexical-indent="5"],
+    .editor-heading-h5[data-lexical-indent="5"],
+    .editor-heading-h6[data-lexical-indent="5"] {
+        margin-left: 100px;
+    }
+
+    /* Smaller headings on mobile */
+    .editor-heading-h1 {
+        font-size: 2em;
+    }
+
+    .editor-heading-h2 {
+        font-size: 1.6em;
+    }
+
+    .editor-heading-h3 {
+        font-size: 1.3em;
+    }
+
+    .editor-heading-h4 {
+        font-size: 1.15em;
+    }
+
+    /* List indent on mobile */
+    .editor-listitem[data-lexical-indent="1"] {
+        margin-left: 20px;
+    }
+
+    .editor-listitem[data-lexical-indent="2"] {
+        margin-left: 40px;
+    }
+
+    .editor-listitem[data-lexical-indent="3"] {
+        margin-left: 60px;
+    }
+
+    .editor-listitem[data-lexical-indent="4"] {
+        margin-left: 80px;
+    }
+
+    .editor-listitem[data-lexical-indent="5"] {
+        margin-left: 100px;
+    }
+
+    /* Checklist indent on mobile */
+    .editor-listitem.editor-listitem-checked[data-lexical-indent="1"],
+    .editor-listitem.editor-listitem-unchecked[data-lexical-indent="1"] {
+        margin-left: 20px;
+    }
+
+    .editor-listitem.editor-listitem-checked[data-lexical-indent="2"],
+    .editor-listitem.editor-listitem-unchecked[data-lexical-indent="2"] {
+        margin-left: 40px;
+    }
+
+    .editor-listitem.editor-listitem-checked[data-lexical-indent="3"],
+    .editor-listitem.editor-listitem-unchecked[data-lexical-indent="3"] {
+        margin-left: 60px;
+    }
+
+    .editor-listitem.editor-listitem-checked[data-lexical-indent="4"],
+    .editor-listitem.editor-listitem-unchecked[data-lexical-indent="4"] {
+        margin-left: 80px;
+    }
+
+    .editor-listitem.editor-listitem-checked[data-lexical-indent="5"],
+    .editor-listitem.editor-listitem-unchecked[data-lexical-indent="5"] {
+        margin-left: 100px;
+    }
+
+    /* Table mobile fixes */
+    .editor-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .editor-table-cell,
+    .editor-table-cell-header {
+        min-width: 80px;
+        padding: 6px 8px;
+        font-size: 0.9em;
+    }
+
+    /* Code block mobile */
+    .editor-code {
+        font-size: 0.85em;
+        padding: 0.75rem;
+    }
+
+    /* Editor input mobile */
+    .editor-input {
+        padding-bottom: 6rem;
     }
 }

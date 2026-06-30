@@ -59,7 +59,7 @@ const LexicalEditContainer: FC = () => {
     const router = useRouter();
     const { id, pid } = router.query;
     const isNew = has(router.query, 'new');
-    const { initNote, findOrCreateNote, fetchNote } = NoteState.useContainer();
+    const { initNote, fetchNote } = NoteState.useContainer();
     const { loadNoteOnDemand } = NoteTreeState.useContainer();
     const {
         settings: { settings },
@@ -106,7 +106,7 @@ const LexicalEditContainer: FC = () => {
                     if (noteData) {
                         initNote(noteData);
                     } else {
-                        console.log('🔄 Fallback to direct API call for note:', id);
+
                         await fetchNote(id);
                     }
                 } catch (error) {
@@ -124,7 +124,6 @@ const LexicalEditContainer: FC = () => {
         router.query.daily,
         settings.daily_root_id,
         initNote,
-        findOrCreateNote,
         fetchNote,
         loadNoteOnDemand,
         toast,
