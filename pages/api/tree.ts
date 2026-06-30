@@ -2,10 +2,9 @@ import { api } from 'libs/server/connect';
 import { useAuth } from 'libs/server/middlewares/auth';
 import { useStore } from 'libs/server/middlewares/store';
 import { readRateLimit } from 'libs/server/middlewares/rate-limit';
-import TreeActions, { TreeModel, ROOT_ID } from 'libs/shared/tree';
-import { StoreProvider } from 'libs/server/store';
-import { getPathNoteById } from 'libs/server/note-path';
-import { metaToJson } from 'libs/server/meta';
+import { TreeModel, TreeItemModel, ROOT_ID } from 'libs/shared/tree';
+import { StorePostgreSQL } from 'libs/server/store/providers/postgresql';
+import { NOTE_DELETED } from 'libs/shared/meta';
 
 // Helper function to add timeout to promises
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -17,113 +16,63 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     ]);
 }
 
-async function enrichTreeWithMetadata(tree: TreeModel, store: StoreProvider): Promise<TreeModel> {
-    const enrichedTree = { ...tree };
+/**
+ * Phase 2: Build tree from notes table by status
+ * Replaces tree_data JSONB read + enrichTreeWithMetadata
+ */
+async function buildTreeByStatus(store: StorePostgreSQL, status: number): Promise<TreeModel> {
+    const notes = await store.getNotesByStatus(status);
 
-    const noteIds = Object.keys(tree.items).filter(id => id !== ROOT_ID);
-    const startTime = performance.now();
+    const items: Record<string, TreeItemModel> = {
+        [ROOT_ID]: { id: ROOT_ID, children: [] as string[] },
+    };
 
-    try {
-        // 🚀 使用批量查询优化 - 解决 N+1 查询问题
-        const notePaths = noteIds.map(noteId => getPathNoteById(noteId));
-        const batchResults = await store.batchGetObjectAndMeta(notePaths);
+    // Use parent_id column directly (no need to decode metadata)
+    const sortOrderCache = new Map<string, number>();
 
-        // 📝 处理批量查询结果
-        const processedResults = noteIds.map((noteId, index) => {
-            const result = batchResults[index];
-            if (result?.meta) {
-                const jsonMeta = metaToJson(result.meta);
+    for (const note of notes) {
+        if (!note.path.startsWith('notes/')) continue;
 
-                let safeTitle = '';
-                try {
-                    safeTitle = jsonMeta.title || '';
-                    if (safeTitle.includes('<') && safeTitle.includes('>')) {
-                        console.warn(`⚠️ Detected HTML in title for note ${noteId}, using fallback`);
-                        safeTitle = '';
-                    }
-                } catch (error) {
-                    console.warn(`⚠️ Failed to process title for note ${noteId}:`, error);
-                    safeTitle = '';
-                }
+        sortOrderCache.set(note.id, note.sort_order);
 
-                return {
-                    id: noteId,
-                    metadata: {
-                        title: safeTitle,
-                        updated_at: result.updated_at || jsonMeta.date || new Date().toISOString(),
-                        deleted: jsonMeta.deleted,
-                        pinned: jsonMeta.pinned,
-                        shared: jsonMeta.shared,
-                        pid: jsonMeta.pid,
-                    }
-                };
-            }
-            return null;
-        });
-
-        // 📝 更新树结构中的元数据
-        processedResults.forEach(result => {
-            if (result && enrichedTree.items[result.id]) {
-                enrichedTree.items[result.id].data = result.metadata as any;
-            }
-        });
-
-        // Batch metadata enrichment completed
-
-    } catch (error) {
-        console.warn('⚠️ Batch metadata enrichment failed, falling back to individual queries:', error);
-
-        // 🛡️ 降级到原有的并发查询方式
-        const metadataPromises = noteIds.map(async (noteId) => {
-            try {
-                const { meta, updated_at } = await store.getObjectAndMeta(getPathNoteById(noteId));
-                if (meta) {
-                    const jsonMeta = metaToJson(meta);
-
-                    let safeTitle = '';
-                    try {
-                        safeTitle = jsonMeta.title || '';
-                        if (safeTitle.includes('<') && safeTitle.includes('>')) {
-                            safeTitle = '';
-                        }
-                    } catch (error) {
-                        console.warn(`⚠️ Failed to process title for note ${noteId}:`, error);
-                        safeTitle = '';
-                    }
-
-                    return {
-                        id: noteId,
-                        metadata: {
-                            title: safeTitle,
-                            updated_at: updated_at || jsonMeta.date || new Date().toISOString(),
-                            deleted: jsonMeta.deleted,
-                            pinned: jsonMeta.pinned,
-                            shared: jsonMeta.shared,
-                            pid: jsonMeta.pid,
-                        }
-                    };
-                }
-                return null;
-            } catch (error) {
-                console.warn(`⚠️ Failed to get metadata for note ${noteId}:`, error);
-                return null;
-            }
-        });
-
-        const metadataResults = await Promise.all(metadataPromises);
-
-        metadataResults.forEach(result => {
-            if (result && enrichedTree.items[result.id]) {
-                enrichedTree.items[result.id].data = result.metadata as any;
-            }
-        });
-
-        const endTime = performance.now();
-        const duration = (endTime - startTime) / 1000;
-        console.log(`✅ Fallback metadata enrichment completed in ${duration.toFixed(2)}s`);
+        items[note.id] = {
+            id: note.id,
+            children: [] as string[],
+            data: {
+                id: note.id,
+                title: note.title || '',
+                pid: note.parent_id,
+                updated_at: new Date().toISOString(),
+                deleted: note.deleted ?? NOTE_DELETED.NORMAL,
+                shared: note.shared,
+                starred: note.starred,
+                status: note.status,
+            } as any,
+        };
     }
 
-    return enrichedTree;
+    // Build parent-child relationships using parent_id column
+    for (const note of notes) {
+        if (!note.path.startsWith('notes/')) continue;
+        if (!items[note.id]) continue;
+        const pid = note.parent_id || ROOT_ID;
+        if (items[pid]) {
+            items[pid].children.push(note.id);
+        } else {
+            items[ROOT_ID].children.push(note.id);
+        }
+    }
+
+    // Sort children of each parent by sort_order
+    for (const item of Object.values(items)) {
+        if (item.children.length > 1) {
+            item.children.sort((a, b) => {
+                return (sortOrderCache.get(a) ?? 0) - (sortOrderCache.get(b) ?? 0);
+            });
+        }
+    }
+
+    return { rootId: ROOT_ID, items };
 }
 
 export default api()
@@ -132,28 +81,27 @@ export default api()
     .use(useStore)
     .get(async (req, res) => {
         try {
-            console.log('Getting tree data...');
+            const status = Number(req.query.status) || 0;
+            const store = req.state.store as StorePostgreSQL;
+
+        
 
             const tree = await withTimeout(
-                req.state.treeStore.get(),
+                buildTreeByStatus(store, status),
                 8000
             );
 
-            console.log('Tree data retrieved, enriching with note metadata...');
 
-            const enrichedTree = await enrichTreeWithMetadata(tree, req.state.store);
-
-            console.log('Tree data enriched, cleaning...');
-            const cleanedTree = TreeActions.cleanTreeModel(enrichedTree);
 
             const style = req.query['style'];
             switch (style) {
                 case 'hierarchy':
-                    res.json(TreeActions.makeHierarchy(cleanedTree));
+                    // For hierarchy style, flatten back to nested structure
+                    res.json(tree);
                     break;
                 case 'list':
                 default:
-                    res.json(cleanedTree);
+                    res.json(tree);
                     break;
             }
         } catch (error) {
@@ -167,26 +115,50 @@ export default api()
     .post(async (req, res) => {
         try {
             const { action, data } = req.body as {
-                action: 'move' | 'mutate';
+                action: 'move' | 'mutate' | 'reorder';
                 data: any;
             };
+            const store = req.state.store as StorePostgreSQL;
 
-            console.log('Tree action:', action, 'data:', data);
+
 
             switch (action) {
-                case 'move':
+                case 'move': {
+                    // Phase 3: Move note by updating pid
+                    const { sourceId, destinationPid } = data;
                     await withTimeout(
-                        req.state.treeStore.moveItem(data.source, data.destination),
+                        (async () => {
+                            // Update the moved note's pid
+                            await store.updateNotePid(sourceId, destinationPid);
+                            // Reorder siblings at destination
+                            if (data.destSiblingIds) {
+                                await store.reorderSiblings(destinationPid, data.destSiblingIds);
+                            }
+                            // Reorder siblings at source (after note removed)
+                            if (data.sourceParentId && data.sourceSiblingIds) {
+                                await store.reorderSiblings(data.sourceParentId, data.sourceSiblingIds);
+                            }
+                        })(),
                         8000
                     );
                     break;
+                }
 
-                case 'mutate':
+                case 'mutate': {
+                    // Update tree item properties (e.g., isExpanded)
+                    // isExpanded is client-only, no server action needed
+                    break;
+                }
+
+                case 'reorder': {
+                    // Reorder siblings
+                    const { parentId, childIds } = data;
                     await withTimeout(
-                        req.state.treeStore.mutateItem(data.id, data),
+                        store.reorderSiblings(parentId, childIds),
                         8000
                     );
                     break;
+                }
 
                 default:
                     return res.APIError.NOT_SUPPORTED.throw('action not found');

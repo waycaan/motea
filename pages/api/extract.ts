@@ -1,8 +1,34 @@
 import { api } from 'libs/server/connect';
 import { useReferrer } from 'libs/server/middlewares/referrer';
 import { unfurl } from 'unfurl.js';
+import { URL } from 'url';
 
 const expires = 86400;
+
+function isPrivateOrReservedIP(hostname: string): boolean {
+    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.)/.test(hostname)) {
+        return true;
+    }
+    if (hostname === 'localhost' || hostname === '0.0.0.0' || hostname === '[::1]') {
+        return true;
+    }
+    return false;
+}
+
+function validateUrl(urlString: string): boolean {
+    try {
+        const parsed = new URL(urlString);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return false;
+        }
+        if (isPrivateOrReservedIP(parsed.hostname)) {
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 export default api()
     .use(useReferrer)
@@ -10,6 +36,10 @@ export default api()
         const url = decodeURIComponent((req.query as { url: string }).url);
         if (!url) {
             return res.APIError.NOT_SUPPORTED.throw('missing url');
+        }
+
+        if (!validateUrl(url)) {
+            return res.status(400).json({ error: 'Invalid or restricted URL' });
         }
 
         const result = await unfurl(url as string, {

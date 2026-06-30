@@ -19,15 +19,23 @@ import { useAuth } from 'libs/server/middlewares/auth';
 import { useStore } from 'libs/server/middlewares/store';
 import AdmZip from 'adm-zip';
 import { api } from 'libs/server/connect';
-import TreeActions, {
+import {
     ROOT_ID,
     HierarchicalTreeItemModel,
+    TreeModel,
+    TreeItemModel,
 } from 'libs/shared/tree';
-import { getPathNoteById } from 'libs/server/note-path';
-import { NOTE_DELETED } from 'libs/shared/meta';
-import { metaToJson } from 'libs/server/meta';
+import { NOTE_DELETED, NOTE_STATUS } from 'libs/shared/meta';
 import { toBuffer } from 'libs/shared/str';
 import { convertHtmlToMarkdown } from 'libs/shared/html-to-markdown';
+import { convertLexicalToMarkdown } from 'libs/shared/lexical-to-markdown';
+import { StorePostgreSQL } from 'libs/server/store/providers/postgresql';
+
+const STATUS_FOLDERS: Record<number, string> = {
+    [NOTE_STATUS.NORMAL]: 'root',
+    [NOTE_STATUS.ARCHIVED]: 'archive',
+    [NOTE_STATUS.STARRED]: 'star',
+};
 
 
 export function escapeFileName(name: string): string {
@@ -40,110 +48,11 @@ export function escapeFileName(name: string): string {
  */
 function convertJSONToMarkdown(jsonContent: string): string {
     try {
-        const data = JSON.parse(jsonContent);
-        const root = data.root;
-        if (!root || !root.children) {
-            return '';
-        }
-
-        return convertNodesToMarkdown(root.children);
+        return convertLexicalToMarkdown(jsonContent);
     } catch (error) {
         console.error('Error parsing JSON:', error);
         return jsonContent;
     }
-}
-
-function convertNodesToMarkdown(nodes: any[]): string {
-    let markdown = '';
-
-    for (const node of nodes) {
-        if (node.type === 'paragraph') {
-            markdown += convertNodesToMarkdown(node.children || []) + '\n\n';
-        } else if (node.type === 'heading') {
-            const level = node.tag ? parseInt(node.tag.replace('h', '')) : 1;
-            const prefix = '#'.repeat(level);
-            markdown += prefix + ' ' + convertNodesToMarkdown(node.children || []) + '\n\n';
-        } else if (node.type === 'list') {
-            markdown += convertListToMarkdown(node) + '\n';
-        } else if (node.type === 'quote') {
-            const quoteText = convertNodesToMarkdown(node.children || []);
-            markdown += '> ' + quoteText.replace(/\n/g, '\n> ') + '\n\n';
-        } else if (node.type === 'code') {
-            const language = node.language || '';
-            const codeText = convertNodesToMarkdown(node.children || []);
-            markdown += '```' + language + '\n' + codeText + '\n```\n\n';
-        } else if (node.type === 'horizontalrule') {
-            markdown += '---\n\n';
-        } else if (node.type === 'table') {
-            markdown += convertTableToMarkdown(node) + '\n';
-        } else if (node.type === 'image') {
-            const alt = node.altText || '';
-            const src = node.src || '';
-            markdown += `![${alt}](${src})\n\n`;
-        } else if (node.type === 'text') {
-            let nodeText = node.text || '';
-            if (node.format) {
-                if (node.format & 1) nodeText = '**' + nodeText + '**'; // bold
-                if (node.format & 2) nodeText = '*' + nodeText + '*'; // italic
-                if (node.format & 4) nodeText = '~~' + nodeText + '~~'; // strikethrough
-                if (node.format & 8) nodeText = '`' + nodeText + '`'; // code
-                if (node.format & 16) nodeText = '<u>' + nodeText + '</u>'; // underline
-                if (node.format & 32) nodeText = '==' + nodeText + '=='; // highlight
-            }
-            markdown += nodeText;
-        } else if (node.children) {
-            markdown += convertNodesToMarkdown(node.children);
-        }
-    }
-
-    return markdown;
-}
-
-function convertListToMarkdown(listNode: any): string {
-    let markdown = '';
-    const items = listNode.children || [];
-
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.type === 'listitem') {
-            const itemText = convertNodesToMarkdown(item.children || []);
-            if (listNode.listType === 'number') {
-                markdown += `${i + 1}. ${itemText}\n`;
-            } else if (listNode.listType === 'check') {
-                const checked = item.checked ? '[x]' : '[ ]';
-                markdown += `- ${checked} ${itemText}\n`;
-            } else {
-                markdown += `- ${itemText}\n`;
-            }
-        }
-    }
-
-    return markdown;
-}
-
-function convertTableToMarkdown(tableNode: any): string {
-    let markdown = '\n';
-    const rows = tableNode.children || [];
-
-    rows.forEach((row: any, rowIndex: number) => {
-        if (row.type === 'tablerow') {
-            const cells = row.children || [];
-            const cellTexts = cells.map((cell: any) => {
-                if (cell.type === 'tablecell') {
-                    return convertNodesToMarkdown(cell.children || []).trim() || ' ';
-                }
-                return ' ';
-            });
-
-            markdown += '| ' + cellTexts.join(' | ') + ' |\n';
-
-            if (rowIndex === 0) {
-                markdown += '| ' + cellTexts.map(() => '---').join(' | ') + ' |\n';
-            }
-        }
-    });
-
-    return markdown + '\n';
 }
 
 // 简单的JSON文本提取函数（备用）
@@ -153,6 +62,10 @@ function extractTextFromJSON(json: any): string {
     }
 
     function extractFromNode(node: any): string {
+        if (node.type === 'linebreak') {
+            return '\n';
+        }
+
         let text = '';
 
         if (node.text) {
@@ -176,69 +89,139 @@ function extractTextFromJSON(json: any): string {
     return extractFromNode(json.root).trim();
 }
 
+/**
+ * Build tree from notes table for export (all statuses)
+ * Returns a map of status -> TreeModel
+ */
+async function buildExportTrees(store: StorePostgreSQL): Promise<Map<number, TreeModel>> {
+    const treesByStatus = new Map<number, TreeModel>();
+
+    for (const status of [NOTE_STATUS.NORMAL, NOTE_STATUS.ARCHIVED, NOTE_STATUS.STARRED]) {
+        const notes = await store.getNotesByStatus(status);
+
+        const items: Record<string, TreeItemModel> = {
+            [ROOT_ID]: { id: ROOT_ID, children: [] as string[] },
+        };
+        for (const note of notes) {
+            items[note.id] = {
+                id: note.id,
+                children: [] as string[],
+                data: { id: note.id, title: note.title || '' } as any,
+            };
+        }
+        for (const note of notes) {
+            const pid = note.parent_id || ROOT_ID;
+            if (items[pid]) {
+                items[pid].children.push(note.id);
+            } else {
+                items[ROOT_ID].children.push(note.id);
+            }
+        }
+        treesByStatus.set(status, { rootId: ROOT_ID, items });
+    }
+
+    return treesByStatus;
+}
+
+/**
+ * Convert flat tree to hierarchical structure for export
+ */
+function makeHierarchy(tree: TreeModel, pid: string): HierarchicalTreeItemModel | null {
+    const item = tree.items[pid];
+    if (!item) return null;
+    return {
+        id: item.id,
+        title: (item.data as any)?.title || '',
+        children: item.children
+            .map((childId) => makeHierarchy(tree, childId))
+            .filter((h): h is HierarchicalTreeItemModel => h !== null),
+    } as HierarchicalTreeItemModel;
+}
+
 export default api()
     .use(useAuth)
     .use(useStore)
     .get(async (req, res) => {
-        const pid = (req.query.pid as string) || ROOT_ID;
         const zip = new AdmZip();
-        const tree = await req.state.treeStore.get();
-        const rootItem = TreeActions.makeHierarchy(tree, pid);
+        const store = req.state.store as StorePostgreSQL;
+        const treesByStatus = await buildExportTrees(store);
         const duplicate: Record<string, number> = {};
 
-        async function addItem(
+        // Helper function to add items with a specific prefix
+        async function addItemWithPrefix(
             item: HierarchicalTreeItemModel,
-            prefix: string = ''
+            statusPrefix: string
         ): Promise<void> {
-            const note = await req.state.store.getObjectAndMeta(
-                getPathNoteById(item.id)
-            );
-            const metaJson = metaToJson(note.meta);
+            let noteData: any = null;
+            const storeAny = req.state.store as any;
+            if ('getNoteById' in storeAny && typeof storeAny.getNoteById === 'function') {
+                noteData = await storeAny.getNoteById(item.id);
+            }
 
-            if (metaJson.deleted === NOTE_DELETED.DELETED) {
+            let deleted = 0;
+            let title = 'Untitled';
+            let content = '';
+
+            if (noteData) {
+                deleted = noteData.deleted ?? 0;
+                title = noteData.title || 'Untitled';
+                content = noteData.content || '';
+            } else {
                 return;
             }
-            const title = escapeFileName(metaJson.title ?? 'Untitled');
 
-            const resolvedPrefix = prefix.length === 0 ? '' : prefix + '/';
-            const basePath = resolvedPrefix + title;
-            const uniquePath = duplicate[basePath]
-                ? `${basePath} (${duplicate[basePath]})`
-                : basePath;
-            duplicate[basePath] = (duplicate[basePath] ?? 0) + 1;
+            if (deleted === NOTE_DELETED.DELETED) {
+                return;
+            }
+            const escapedTitle = escapeFileName(title);
+            const basePath = statusPrefix + escapedTitle;
+            let uniquePath = basePath;
+            if (duplicate[basePath] !== undefined) {
+                duplicate[basePath]++;
+                uniquePath = `${basePath} (${duplicate[basePath]})`;
+            } else {
+                duplicate[basePath] = 0;
+            }
 
-            // 检测内容格式并转换为markdown
             let markdownContent = '';
-            if (note.content) {
-                const trimmed = note.content.trim();
+            if (content) {
+                const trimmed = content.trim();
                 if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-
                     try {
-                        markdownContent = convertJSONToMarkdown(note.content);
+                        markdownContent = convertJSONToMarkdown(content);
                     } catch (error) {
-                        console.error('JSON conversion failed, using fallback:', error);
                         try {
-                            const jsonData = JSON.parse(note.content);
+                            const jsonData = JSON.parse(content);
                             markdownContent = extractTextFromJSON(jsonData);
                         } catch (parseError) {
-                            markdownContent = note.content;
+                            markdownContent = content;
                         }
                     }
                 } else {
-
-                    markdownContent = convertHtmlToMarkdown(note.content);
+                    markdownContent = convertHtmlToMarkdown(content);
                 }
             }
 
             zip.addFile(`${uniquePath}.md`, toBuffer(markdownContent));
-            await Promise.all(item.children.map((v) => addItem(v, uniquePath)));
+            await Promise.all(item.children.map((v) => addItemWithPrefix(v, uniquePath + '/')));
         }
 
-        if (rootItem) {
-            await Promise.all(rootItem.children.map((v) => addItem(v)));
+        // Export each status group into its own folder
+        for (const [status, tree] of treesByStatus) {
+            const folderName = STATUS_FOLDERS[status] || 'root';
+            const rootItem = makeHierarchy(tree, ROOT_ID);
+
+            if (rootItem && rootItem.children.length > 0) {
+                // Clear duplicate tracking for each status folder
+                Object.keys(duplicate).forEach(key => delete duplicate[key]);
+
+                await Promise.all(rootItem.children.map(async (v) => {
+                    const tempPrefix = `${folderName}/`;
+                    await addItemWithPrefix(v, tempPrefix);
+                }));
+            }
         }
 
-        // 生成带时间戳的文件名：motea_20250712013736.zip
         const now = new Date();
         const timestamp = now.getFullYear().toString() +
             (now.getMonth() + 1).toString().padStart(2, '0') +

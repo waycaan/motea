@@ -26,7 +26,9 @@ import { genId } from 'libs/shared/id';
 import { ROOT_ID } from 'libs/shared/tree';
 import { createNote } from 'libs/server/note';
 import { NoteModel } from 'libs/shared/note';
-import { parseMarkdownTitle } from 'libs/shared/markdown/parse-markdown-title';
+// parseMarkdownTitle removed - using filename as title instead
+import { convertHtmlToMarkdown } from 'libs/shared/html-to-markdown';
+import { NOTE_STATUS } from 'libs/shared/meta';
 
 const MARKDOWN_EXT = [
     '.markdown',
@@ -41,6 +43,52 @@ const MARKDOWN_EXT = [
     '.Rmd',
 ];
 
+const HTML_EXT = ['.html', '.htm'];
+
+// Status folder mapping for import
+const STATUS_FOLDER_MAP: Record<string, number> = {
+    'root': NOTE_STATUS.NORMAL,
+    'archive': NOTE_STATUS.ARCHIVED,
+    'star': NOTE_STATUS.STARRED,
+};
+
+/**
+ * Detect if content is HTML
+ */
+function isHtmlContent(content: string): boolean {
+    const trimmed = content.trim();
+    // Check for common HTML patterns
+    if (/^<!DOCTYPE\s+html>/i.test(trimmed)) return true;
+    if (/^<html[\s>]/i.test(trimmed)) return true;
+    // Check for HTML tags that indicate structured content
+    if (/<(div|p|span|h[1-6]|ul|ol|li|table|tr|td|th|pre|code|blockquote|a|img|strong|em|b|i)\b/i.test(trimmed)) {
+        // Make sure it's not just markdown with angle brackets
+        const htmlTagCount = (trimmed.match(/<(div|p|span|h[1-6]|ul|ol|li|table|tr|td|th|pre|code|blockquote|a|img|strong|em|b|i)\b/gi) || []).length;
+        const closingTagCount = (trimmed.match(/<\/(div|p|span|h[1-6]|ul|ol|li|table|tr|td|th|pre|code|blockquote|a|img|strong|em|b|i)>/gi) || []).length;
+        // If there are opening and closing tags, it's likely HTML
+        if (htmlTagCount >= 2 && closingTagCount >= 1) return true;
+    }
+    return false;
+}
+
+/**
+ * Process raw content: detect HTML or Markdown, return cleaned content
+ */
+function processRawContent(rawContent: string): string {
+    const trimmed = rawContent.trim();
+
+    // Empty content
+    if (!trimmed) return '';
+
+    // If it's HTML, convert to markdown
+    if (isHtmlContent(trimmed)) {
+        return convertHtmlToMarkdown(trimmed);
+    }
+
+    // Otherwise treat as markdown
+    return trimmed;
+}
+
 export const config = {
     api: {
         bodyParser: false,
@@ -52,9 +100,9 @@ export default api()
     .use(useStore)
     .post(async (req, res) => {
         const pid = (req.query.pid as string) || ROOT_ID;
-        const file = await readFileFromRequest(req);
+        const file = await readFileFromRequest(req) as any;
 
-        if (!file || !file.path) {
+        if (!file || !file.filepath) {
             console.error('File not received or file path is missing');
             return res.status(400).json({ error: 'File not received or invalid file data' });
         }
@@ -63,7 +111,7 @@ export default api()
             return res.APIError.IMPORT_FILE_LIMIT_SIZE.throw();
         }
 
-        const zip = new AdmZip(file.path);
+        const zip = new AdmZip(file.filepath);
         const zipEntries = zip.getEntries();
         const total = zipEntries.length;
 
@@ -71,17 +119,21 @@ export default api()
             return res.status(400).json({ error: 'ZIP file is empty' });
         }
 
-        // 检查是否包含 Markdown 文件
-        const hasMarkdownFiles = zipEntries.some(entry => {
-            const ext = extname(entry.name);
-            return MARKDOWN_EXT.includes(ext.toLowerCase());
+        const hasImportableFiles = zipEntries.some(entry => {
+            const ext = extname(entry.name).toLowerCase();
+            return MARKDOWN_EXT.includes(ext) || HTML_EXT.includes(ext);
         });
 
-        if (!hasMarkdownFiles) {
-            return res.status(400).json({ error: 'No Markdown files found in ZIP' });
+        if (!hasImportableFiles) {
+            return res.status(400).json({ error: 'No Markdown or HTML files found in ZIP' });
         }
 
-        // Step 1: Build hierarchy of entries
+        // Detect if ZIP has status folders (root, archive, star)
+        const hasStatusFolders = zipEntries.some(entry => {
+            const firstFolder = entry.entryName.split(/[\\/]/)[0];
+            return firstFolder in STATUS_FOLDER_MAP;
+        });
+
         type HierarchyNode = {
             name: string;
             entry?: AdmZip.IZipEntry;
@@ -94,18 +146,18 @@ export default api()
             let name: string = v.name;
             if (!v.isDirectory) {
                 const entryNameExtension = extname(v.name).toLowerCase();
-                let isMarkdown = MARKDOWN_EXT.includes(entryNameExtension);
+                const isImportable = MARKDOWN_EXT.includes(entryNameExtension) || HTML_EXT.includes(entryNameExtension);
                 
-                if (isMarkdown) {
+                if (isImportable) {
                     name = v.name.substring(
                         0,
                         v.name.length - entryNameExtension.length
                     );
                 } else {
-                    return; // 不是 Markdown 文件，跳过
+                    return;
                 }
             }
-            const pathParts = v.entryName.split(/[\\/]/).filter(Boolean); // 同时处理 '/' 和 '\' 分隔符
+            const pathParts = v.entryName.split(/[\\/]/).filter(Boolean);
 
             let currentHierarchy = hierachy;
             let me: HierarchyNode | undefined;
@@ -127,10 +179,12 @@ export default api()
         });
 
         let count: number = 0;
+        const errors: string[] = [];
 
         async function createNotes(
             currentNode: HierarchyNode,
-            parent?: string
+            parent?: string,
+            status: number = NOTE_STATUS.NORMAL
         ): Promise<string> {
             let date: string | undefined,
                 title: string | undefined,
@@ -141,12 +195,15 @@ export default api()
                 if (!entry.isDirectory) {
                     try {
                         const rawContent = entry.getData().toString('utf-8');
-                        const parsed = parseMarkdownTitle(rawContent);
-                        title = parsed.title;
-                        content = parsed.content;
+                        const processedContent = processRawContent(rawContent);
+                        content = processedContent;
+                        title = currentNode.name;
                     } catch (error) {
-                        console.error(`Error processing file ${entry.name}:`, error);
-                        throw new Error(`Failed to process Markdown file: ${entry.name}`);
+                        const msg = `Failed to process ${entry.name}: ${(error as Error).message}`;
+                        console.error(msg);
+                        errors.push(msg);
+                        title = currentNode.name;
+                        content = '';
                     }
                 }
             }
@@ -156,26 +213,37 @@ export default api()
                 id: genId(),
                 date,
                 content,
+                status,
             } as NoteModel;
 
             const createdNote = await createNote(note, req.state);
-            await req.state.treeStore.addItem(createdNote.id, parent);
             count++;
             
-            for (const child of Object.values(currentNode.children)) {
-                await createNotes(child, createdNote.id);
-            }
+            await Promise.all(
+                Object.values(currentNode.children).map((child) => createNotes(child, createdNote.id, status))
+            );
 
             return createdNote.id;
         }
 
         try {
-            await Promise.all(
-                Object.values(hierachy).map((v) => createNotes(v, pid))
-            );
-            res.json({ total, imported: count });
+            if (hasStatusFolders) {
+                // Import with status folder detection
+                for (const [folderName, node] of Object.entries(hierachy)) {
+                    const status = STATUS_FOLDER_MAP[folderName] ?? NOTE_STATUS.NORMAL;
+                    await Promise.all(
+                        Object.values(node.children).map((child) => createNotes(child, pid, status))
+                    );
+                }
+            } else {
+                // Legacy flat structure - all notes as NORMAL
+                await Promise.all(
+                    Object.values(hierachy).map((v) => createNotes(v, pid, NOTE_STATUS.NORMAL))
+                );
+            }
+            res.json({ total, imported: count, errors: errors.length > 0 ? errors : undefined });
         } catch (error) {
             console.error('Error importing notes:', error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: (error as Error).message });
         }
     });

@@ -11,8 +11,7 @@ import { applyCsrf } from 'libs/server/middlewares/csrf';
 import { SettingFooter } from 'components/settings/setting-footer';
 import { SSRContext, ssr } from 'libs/server/connect';
 import { applyReset } from 'libs/server/middlewares/reset';
-import { applyMisconfiguration } from 'libs/server/middlewares/misconfiguration';
-import { DebugInformation } from 'libs/shared/debugging';
+import { applyTree } from 'libs/server/middlewares/tree';
 import UIState from 'libs/web/state/ui';
 import IconButton from 'components/icon-button';
 import { useCallback, MouseEvent } from 'react';
@@ -43,7 +42,7 @@ const SettingsMenuButton = () => {
     );
 };
 
-const SettingsPage: NextPage<{ debugInformation: DebugInformation, tree: TreeModel }> = ({ tree, debugInformation }) => {
+const SettingsPage: NextPage<{ tree: TreeModel }> = ({ tree }) => {
     const { t } = useI18n();
 
     return (
@@ -57,7 +56,7 @@ const SettingsPage: NextPage<{ debugInformation: DebugInformation, tree: TreeMod
                         </h1>
                     </div>
 
-                    <SettingsContainer debugInfo={debugInformation} />
+                    <SettingsContainer />
                     <SettingFooter />
                 </div>
             </section>
@@ -71,11 +70,11 @@ export const getServerSideProps = async (ctx: SSRContext) => {
     await ssr()
         .use(useSession)
         .use(applyAuth)
+        .use(applyTree)
         .use(applyReset)
         .use(applySettings)
         .use(applyCsrf)
         .use(applyUA)
-        .use(applyMisconfiguration)
         .run(ctx.req, ctx.res);
 
     return {

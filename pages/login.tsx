@@ -4,10 +4,11 @@ import { applyCsrf } from 'libs/server/middlewares/csrf';
 import { useSession } from 'libs/server/middlewares/session';
 import useFetcher from 'libs/web/api/fetcher';
 import router from 'next/router';
+import dynamic from 'next/dynamic';
 import { FormEvent, useCallback, useEffect } from 'react';
 import { useToast } from 'libs/web/hooks/use-toast';
 
-const LoginPage = () => {
+const LoginContent = () => {
     const { request, error, loading } = useFetcher();
     const toast = useToast();
     const onSubmit = useCallback(
@@ -26,7 +27,12 @@ const LoginPage = () => {
                 }
             );
             if (data?.isLoggedIn) {
-                location.href = (router.query.redirect as string) || '/';
+                const redirect = (router.query.redirect as string) || '/';
+                if (redirect.startsWith('/') && !redirect.startsWith('//')) {
+                    location.href = redirect;
+                } else {
+                    location.href = '/';
+                }
             }
         },
         [request]
@@ -75,6 +81,8 @@ const LoginPage = () => {
         </div>
     );
 };
+
+const LoginPage = dynamic(() => Promise.resolve(LoginContent), { ssr: false });
 
 export default LoginPage;
 

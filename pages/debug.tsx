@@ -52,15 +52,15 @@ export function DebugPage({ debugInformation }: ServerProps) {
             <footer className="flex flex-col my-auto mx-auto">
                 <div className="mx-auto">
                     <a
-                        href="https://github.com/notea-org/notea"
+                        href="https://github.com/waycaan/motea"
                         target="_blank"
                         rel="noreferrer"
                     >
-                        Notea v{pkg.version}
+                        Motea v3.0.0
                     </a>
                 </div>
                 <div className="space-x-1">
-                    <span>MIT &copy;</span>
+                    <span>Apache 2.0 &copy; waycaan 2025 | Based on </span>
                     <a
                         href="https://github.com/notea-org/notea"
                         target="_blank"

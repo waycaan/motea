@@ -38,6 +38,14 @@ class MyDocument extends Document {
                     <link rel="manifest" href="/static/manifest.json" />
                 </Head>
                 <body className="bg-gray-50 text-gray-800 overflow-x-hidden">
+                    <style>{`
+                        body {
+                            padding-top: env(safe-area-inset-top);
+                            padding-bottom: env(safe-area-inset-bottom);
+                            padding-left: env(safe-area-inset-left);
+                            padding-right: env(safe-area-inset-right);
+                        }
+                    `}</style>
                     <Main />
                     <NextScript />
                 </body>

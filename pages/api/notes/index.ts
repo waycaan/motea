@@ -10,7 +10,7 @@ export default api()
     .use(useStore)
     .post(async (req, res) => {
         const note = await createNote(req.body, req.state);
-        await req.state.treeStore.addItem(note.id, note.pid);
+        // Phase 5: tree is now built from notes.pid, no need for treeStore.addItem()
 
         res.json(note);
     });
